@@ -33,6 +33,11 @@ func main() {
 	fmt.Printf("Algorithms: %+v\n", trans.certAlgorithms)
 }
 
+type certAlgPair struct {
+	publicKeyAlgorithm string
+	signatureAlgorithm string
+}
+
 type timingTransport struct {
 	dnsResolve   time.Duration
 	firstByte    time.Duration
@@ -46,23 +51,6 @@ type timingTransport struct {
 	certAlgorithms map[string]certAlgPair
 
 	rsp *http.Response
-}
-
-func validateRequest(req *http.Request) error {
-	if req.URL == nil {
-		return errors.New("http: nil Request.URL")
-	}
-	if req.Header == nil {
-		return errors.New("http: nil Request.Header")
-	}
-	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
-		return errors.New("http: unsupported protocol scheme")
-	}
-	if req.URL.Host == "" {
-		return errors.New("http: no Host in request URL")
-	}
-
-	return nil
 }
 
 func canonicalize(url *url.URL) (string, string) {
@@ -114,11 +102,6 @@ func roundTrip(url string) (*timingTransport, error) {
 	res.completeLoad = time.Now().Sub(preNormal)
 
 	return res, nil
-}
-
-type certAlgPair struct {
-	publicKeyAlgorithm string
-	signatureAlgorithm string
 }
 
 func extractCertChain(state *tls.ConnectionState) map[string]certAlgPair {
@@ -226,4 +209,21 @@ func convertAlgorithm(p x509.PublicKeyAlgorithm) string {
 	}
 
 	return "UNKNOWN"
+}
+
+func validateRequest(req *http.Request) error {
+	if req.URL == nil {
+		return errors.New("http: nil Request.URL")
+	}
+	if req.Header == nil {
+		return errors.New("http: nil Request.Header")
+	}
+	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+		return errors.New("http: unsupported protocol scheme")
+	}
+	if req.URL.Host == "" {
+		return errors.New("http: no Host in request URL")
+	}
+
+	return nil
 }
