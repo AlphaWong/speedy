@@ -1,0 +1,10 @@
+{
+  "url": "",
+  "exchange": "perftest",
+  "queue": "incoming",
+  "tls_config": {
+    "cert": "",
+    "key": "",
+    "ca_cert": ""
+  }
+}

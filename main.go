@@ -35,18 +35,22 @@ func main() {
 			panic(err)
 		}
 
-		incomingMessages, err := rc.Connect(config)
+		incomingMessages, err := rc.NewConsumer(config)
 		if err != nil {
 			panic(err)
 		}
 
 		for msg := range incomingMessages {
-			url := msg.Payload
-			results, err := roundtrip(url)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(results)
+			go func(m *rc.Message) {
+				url := m.Payload
+				results, err := roundtrip(url)
+				if err != nil {
+					m.Ack(false)
+					panic(err)
+				}
+				fmt.Println(results)
+				m.Ack(true)
+			}(msg)
 		}
 	}
 }
