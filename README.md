@@ -16,4 +16,4 @@ You can either provide a config file like
 }
 ```
 
-OR use the command line: `go run *.go -cmdline http[s]://netlify.com``
+OR use the command line: `go run *.go -cmdline http[s]://netlify.com`
