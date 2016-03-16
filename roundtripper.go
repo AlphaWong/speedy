@@ -3,54 +3,43 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
 
-func main() {
-	url := os.Args[1]
-	trans, err := roundTrip(url)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Time DNS: %s\n", trans.dnsResolve)
-	fmt.Printf("Time First Byte: %s\n", trans.firstByte)
-	fmt.Printf("Time Complete Load: %s\n", trans.completeLoad)
-	fmt.Printf("Time Connecting: %s\n", trans.connect)
-	fmt.Printf("Time Doing TLS Handshake: %s\n", trans.tlsHandshake)
-	fmt.Printf("Time Writing Request: %s\n", trans.writeTime)
-
-	fmt.Printf("Cipher Suite: %s\n", trans.cipherSuite)
-	fmt.Printf("TLS Protocol: %s\n", trans.protocols)
-	fmt.Printf("Algorithms: %+v\n", trans.certAlgorithms)
-}
-
 type certAlgPair struct {
-	publicKeyAlgorithm string
-	signatureAlgorithm string
+	PublicKeyAlgorithm string
+	SignatureAlgorithm string
 }
 
 type timingTransport struct {
-	dnsResolve   time.Duration
-	firstByte    time.Duration
-	completeLoad time.Duration
-	connect      time.Duration
-	tlsHandshake time.Duration
-	writeTime    time.Duration
+	DNSResolve   time.Duration `json:"dns_resolve"`
+	FirstByte    time.Duration `json:"first_byte"`
+	CompleteLoad time.Duration `json:"complete_load"`
+	Connect      time.Duration `json:"connect"`
+	TLSHandshake time.Duration `json:"tls_handshake"`
+	WriteTime    time.Duration `json:"write_request"`
 
-	cipherSuite    string
-	protocols      string
-	certAlgorithms map[string]certAlgPair
+	CipherSuite     string                 `json:"cipher_suite"`
+	Protocols       string                 `json:"protocols"`
+	CertificateAlgs map[string]certAlgPair `json:"certificate_algs"`
 
 	rsp *http.Response
+}
+
+func (t timingTransport) String() string {
+	bytes, err := json.Marshal(t)
+	if err != nil {
+		panic(err)
+	}
+	return string(bytes)
 }
 
 func canonicalize(url *url.URL) (string, string) {
@@ -68,7 +57,7 @@ func canonicalize(url *url.URL) (string, string) {
 	return host, port
 }
 
-func roundTrip(url string) (*timingTransport, error) {
+func roundtrip(url string) (*timingTransport, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -90,16 +79,16 @@ func roundTrip(url string) (*timingTransport, error) {
 	preWrite := time.Now()
 	client.Write(req)
 	postWrite := time.Now()
-	res.writeTime = postWrite.Sub(preWrite)
+	res.WriteTime = postWrite.Sub(preWrite)
 
 	// discard the results, this should just read the first chunk from the sock
 	client.Read(req)
-	res.firstByte = time.Now().Sub(postWrite)
+	res.FirstByte = time.Now().Sub(postWrite)
 
 	// now just do a normal request
 	preNormal := time.Now()
 	res.rsp, err = http.Get(url)
-	res.completeLoad = time.Now().Sub(preNormal)
+	res.CompleteLoad = time.Now().Sub(preNormal)
 
 	return res, nil
 }
@@ -109,8 +98,8 @@ func extractCertChain(state *tls.ConnectionState) map[string]certAlgPair {
 
 	for _, cert := range state.PeerCertificates {
 		results[cert.Issuer.CommonName] = certAlgPair{
-			publicKeyAlgorithm: convertAlgorithm(cert.PublicKeyAlgorithm),
-			signatureAlgorithm: cert.SignatureAlgorithm.String(),
+			PublicKeyAlgorithm: convertAlgorithm(cert.PublicKeyAlgorithm),
+			SignatureAlgorithm: cert.SignatureAlgorithm.String(),
 		}
 	}
 
@@ -123,12 +112,11 @@ func (t *timingTransport) dial(req *http.Request) (net.Conn, error) {
 	// host -> ip
 	preDNS := time.Now()
 	ips, err := net.LookupIP(host)
-	t.dnsResolve = time.Now().Sub(preDNS)
+	t.DNSResolve = time.Now().Sub(preDNS)
 	if err != nil {
 		panic(err)
 	}
 	ip := ips[0]
-	fmt.Printf("resolved %s -> %s\n", req.URL, ip)
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
 	if err != nil {
@@ -147,11 +135,11 @@ func (t *timingTransport) dial(req *http.Request) (net.Conn, error) {
 			return nil, err
 		}
 		state := conn.(*tls.Conn).ConnectionState()
-		t.cipherSuite = convertCipher(state.CipherSuite)
-		t.protocols = state.NegotiatedProtocol
-		t.certAlgorithms = extractCertChain(&state)
+		t.CipherSuite = convertCipher(state.CipherSuite)
+		t.Protocols = state.NegotiatedProtocol
+		t.CertificateAlgs = extractCertChain(&state)
 
-		t.tlsHandshake = time.Now().Sub(preTLS)
+		t.TLSHandshake = time.Now().Sub(preTLS)
 	}
 
 	return conn, nil
