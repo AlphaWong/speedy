@@ -1,10 +1,13 @@
 {
-  "url": "",
-  "exchange": "perftest",
+  "url": "amqps://rabbit.lo",
+  "exchange": {
+    "name":"speedy",
+    "type": "direct"
+  },
   "queue": "incoming",
   "tls_config": {
-    "cert": "",
-    "key": "",
-    "ca_cert": ""
+    "cert": "/usr/local/etc/certs/speedy.pem",
+    "key": "/usr/local/etc/certs/speedy-key.pem",
+    "ca_certs": ["/usr/local/etc/certs/ca.pem"]
   }
 }
