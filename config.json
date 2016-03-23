@@ -2,9 +2,12 @@
   "url": "amqps://rabbit.lo",
   "exchange": {
     "name":"speedy",
-    "type": "direct"
+    "type": "fanout"
   },
-  "queue": "incoming",
+  "queue": {
+    "name": "incoming",
+    "binding_key": "speedy"
+  },
   "tls_config": {
     "cert": "/usr/local/etc/certs/speedy.pem",
     "key": "/usr/local/etc/certs/speedy-key.pem",

@@ -1,11 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 
 	rc "github.com/netlify/rabbit-client"
+	"github.com/streadway/amqp"
 )
+
+type expectedMessage struct {
+	URL         string `json:"url"`
+	CallbackURL string `json:"callback_url"`
+	TimeoutSec  int32  `json:"timeout_sec"`
+}
 
 func main() {
 	useCmdLine := flag.Bool(
@@ -35,22 +43,27 @@ func main() {
 			panic(err)
 		}
 
-		incomingMessages, err := rc.NewConsumer(config)
+		incomingDelivery, err := rc.NewConsumer(config)
 		if err != nil {
 			panic(err)
 		}
 
-		for msg := range incomingMessages {
-			go func(m *rc.Message) {
-				url := m.Payload
-				results, err := roundtrip(url)
-				if err != nil {
-					m.Ack(false)
+		for delivery := range incomingDelivery {
+			go func(d *amqp.Delivery) {
+				d.Ack(true) // can't do anything if we fail anyways
+
+				msg := new(expectedMessage)
+				if err = json.Unmarshal(d.Body, msg); err != nil {
 					panic(err)
 				}
+
+				results, err := roundtrip(msg.URL)
+				if err != nil {
+					panic(err)
+				}
+
 				fmt.Println(results)
-				m.Ack(true)
-			}(msg)
+			}(&delivery)
 		}
 	}
 }
