@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -34,13 +33,7 @@ type timingTransport struct {
 	rsp *http.Response
 }
 
-func (t timingTransport) String() string {
-	bytes, err := json.Marshal(t)
-	if err != nil {
-		panic(err)
-	}
-	return string(bytes)
-}
+var requestCounter = 0
 
 func canonicalize(url *url.URL) (string, string) {
 	host := url.Host
@@ -57,39 +50,88 @@ func canonicalize(url *url.URL) (string, string) {
 	return host, port
 }
 
-func roundtrip(url string) (*timingTransport, error) {
+func getLogger(enabled bool, url string) func(string, ...interface{}) {
+	if enabled {
+		return func(format string, args ...interface{}) {
+			format = "%d - %s : " + format
+			args = append([]interface{}{requestCounter, url}, args...)
+
+			if !strings.HasSuffix(format, "\n") {
+				format = format + "\n"
+			}
+			fmt.Printf(format, args...)
+		}
+	}
+
+	return func(string, ...interface{}) {} // noop
+}
+
+func roundtrip(url string, printState bool) (res *timingTransport, err error) {
+	show := getLogger(printState, url)
+	defer func() { requestCounter++ }()
+	res = new(timingTransport)
+	show("Starting Timing")
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res := new(timingTransport)
-
+	show("Validating request")
 	err = validateRequest(req)
 	if err != nil {
 		return nil, err
 	}
+	show("Reqest is valid")
 
-	conn, err := res.dial(req)
+	// now just do a normal request
+	show("Making full GET request")
+	preNormal := time.Now()
+	res.rsp, err = http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 
+	res.CompleteLoad = time.Now().Sub(preNormal)
+	show("Completed GET request in %s", res.CompleteLoad)
+
+	host, port := canonicalize(req.URL)
+
+	show("Resolving DNS")
+	rawip, err := resolve(host, res)
+	if err != nil {
+		return nil, err
+	}
+	show("DNS successful: %s", rawip)
+
+	var formattedIP string
+	if ip := rawip.To4(); ip != nil {
+		formattedIP = fmt.Sprintf("%s:%s", rawip, port)
+	} else {
+		formattedIP = fmt.Sprintf("[%s]:%s", rawip, port)
+	}
+
+	show("Going to dial %s", formattedIP)
+	conn, err := net.Dial("tcp", formattedIP)
+	if err != nil {
+		return nil, err
+	}
+	show("Finished dialing")
+
+	show("Checking HTTPS certs")
+	tryHTTPS(&conn, req, res)
+	show("Finished HTTPS check")
+
+	show("Checking time to first byte")
 	client := httputil.NewClientConn(conn, nil)
 	preWrite := time.Now()
 	client.Write(req)
 	postWrite := time.Now()
 	res.WriteTime = postWrite.Sub(preWrite)
-
+	show("Wrote request")
 	// discard the results, this should just read the first chunk from the sock
 	client.Read(req)
 	res.FirstByte = time.Now().Sub(postWrite)
-
-	// now just do a normal request
-	preNormal := time.Now()
-	res.rsp, err = http.Get(url)
-	res.CompleteLoad = time.Now().Sub(preNormal)
-
+	show("Finished checking time to first byte")
 	return res, nil
 }
 
@@ -106,35 +148,33 @@ func extractCertChain(state *tls.ConnectionState) map[string]certAlgPair {
 	return results
 }
 
-func (t *timingTransport) dial(req *http.Request) (net.Conn, error) {
-	host, port := canonicalize(req.URL)
-
+func resolve(host string, t *timingTransport) (*net.IP, error) {
 	// host -> ip
 	preDNS := time.Now()
 	ips, err := net.LookupIP(host)
 	t.DNSResolve = time.Now().Sub(preDNS)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	ip := ips[0]
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
-	if err != nil {
-		return nil, err
-	}
+	return &ip, nil
+}
 
+func tryHTTPS(conn *net.Conn, req *http.Request, t *timingTransport) (tlsConn net.Conn, err error) {
 	if req.URL.Scheme == "https" {
 		preTLS := time.Now()
-		conn = tls.Client(conn, &tls.Config{ServerName: req.URL.Host})
+		tlsConn = tls.Client(*conn, &tls.Config{ServerName: req.URL.Host})
 
-		if err = conn.(*tls.Conn).Handshake(); err != nil {
+		if err = tlsConn.(*tls.Conn).Handshake(); err != nil {
 			return nil, err
 		}
 
-		if err = conn.(*tls.Conn).VerifyHostname(req.URL.Host); err != nil {
+		if err = tlsConn.(*tls.Conn).VerifyHostname(req.URL.Host); err != nil {
 			return nil, err
 		}
-		state := conn.(*tls.Conn).ConnectionState()
+
+		state := tlsConn.(*tls.Conn).ConnectionState()
 		t.CipherSuite = convertCipher(state.CipherSuite)
 		t.Protocols = state.NegotiatedProtocol
 		t.CertificateAlgs = extractCertChain(&state)
@@ -142,7 +182,7 @@ func (t *timingTransport) dial(req *http.Request) (net.Conn, error) {
 		t.TLSHandshake = time.Now().Sub(preTLS)
 	}
 
-	return conn, nil
+	return
 }
 
 func convertCipher(c uint16) string {
