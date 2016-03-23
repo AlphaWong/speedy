@@ -18,7 +18,7 @@ type certAlgPair struct {
 	SignatureAlgorithm string
 }
 
-type timingTransport struct {
+type timingResults struct {
 	DNSResolve   time.Duration `json:"dns_resolve"`
 	FirstByte    time.Duration `json:"first_byte"`
 	CompleteLoad time.Duration `json:"complete_load"`
@@ -33,7 +33,81 @@ type timingTransport struct {
 	rsp *http.Response
 }
 
-var requestCounter = 0
+type requestContext struct {
+	logger       func(string, ...interface{})
+	requestIndex int32
+	url          string
+	results      *timingResults
+}
+
+func (r *requestContext) measure() {
+	res := new(timingResults)
+	r.logger("Starting Timing")
+
+	req, err := http.NewRequest("GET", r.url, nil)
+	if err != nil {
+		r.logger("Failed to build request: %v", err)
+		return
+	}
+
+	r.logger("Validating request")
+	err = validateRequest(req)
+	if err != nil {
+		r.logger("Failed to validate request: %v", err)
+		return
+	}
+	r.logger("Request is valid")
+
+	// now just do a normal request
+	r.logger("Making full GET request")
+	preNormal := time.Now()
+	res.rsp, err = http.Get(r.url)
+	if err != nil {
+		r.logger("Failed to make full request: %v", err)
+		return
+	}
+	res.CompleteLoad = time.Now().Sub(preNormal)
+	r.logger("Completed GET request in %s", res.CompleteLoad)
+
+	// now do the partials
+	host, port := canonicalize(req.URL)
+
+	r.logger("Resolving DNS")
+	rawip, err := resolve(host, res)
+	if err != nil {
+		r.logger("Failed to make resolve %s into an ip: %v", host, err)
+		return
+	}
+
+	r.logger("DNS successful: %s", rawip)
+
+	directHost := formatURL(rawip, port)
+	r.logger("Going to dial %s", directHost)
+	conn, err := net.Dial("tcp", directHost)
+	if err != nil {
+		r.logger("Failed to dial %s: %v", directHost, err)
+		return
+	}
+	r.logger("Finished dialing")
+
+	r.logger("Checking HTTPS certs")
+	tryHTTPS(&conn, req, res)
+	r.logger("Finished HTTPS check")
+
+	r.logger("Checking time to first byte")
+	client := httputil.NewClientConn(conn, nil)
+	preWrite := time.Now()
+	client.Write(req)
+	postWrite := time.Now()
+	res.WriteTime = postWrite.Sub(preWrite)
+	r.logger("Wrote request")
+	// discard the results, this should just read the first chunk from the sock
+	client.Read(req)
+	res.FirstByte = time.Now().Sub(postWrite)
+	r.logger("Finished checking time to first byte")
+
+	r.results = res
+}
 
 func canonicalize(url *url.URL) (string, string) {
 	host := url.Host
@@ -50,89 +124,14 @@ func canonicalize(url *url.URL) (string, string) {
 	return host, port
 }
 
-func getLogger(enabled bool, url string) func(string, ...interface{}) {
-	if enabled {
-		return func(format string, args ...interface{}) {
-			format = "%d - %s : " + format
-			args = append([]interface{}{requestCounter, url}, args...)
-
-			if !strings.HasSuffix(format, "\n") {
-				format = format + "\n"
-			}
-			fmt.Printf(format, args...)
-		}
-	}
-
-	return func(string, ...interface{}) {} // noop
-}
-
-func roundtrip(url string, printState bool) (res *timingTransport, err error) {
-	show := getLogger(printState, url)
-	defer func() { requestCounter++ }()
-	res = new(timingTransport)
-	show("Starting Timing")
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	show("Validating request")
-	err = validateRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	show("Reqest is valid")
-
-	// now just do a normal request
-	show("Making full GET request")
-	preNormal := time.Now()
-	res.rsp, err = http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	res.CompleteLoad = time.Now().Sub(preNormal)
-	show("Completed GET request in %s", res.CompleteLoad)
-
-	host, port := canonicalize(req.URL)
-
-	show("Resolving DNS")
-	rawip, err := resolve(host, res)
-	if err != nil {
-		return nil, err
-	}
-	show("DNS successful: %s", rawip)
-
+func formatURL(rawIP *net.IP, port string) string {
 	var formattedIP string
-	if ip := rawip.To4(); ip != nil {
-		formattedIP = fmt.Sprintf("%s:%s", rawip, port)
+	if ip := rawIP.To4(); ip != nil {
+		formattedIP = fmt.Sprintf("%s:%s", rawIP, port)
 	} else {
-		formattedIP = fmt.Sprintf("[%s]:%s", rawip, port)
+		formattedIP = fmt.Sprintf("[%s]:%s", rawIP, port)
 	}
-
-	show("Going to dial %s", formattedIP)
-	conn, err := net.Dial("tcp", formattedIP)
-	if err != nil {
-		return nil, err
-	}
-	show("Finished dialing")
-
-	show("Checking HTTPS certs")
-	tryHTTPS(&conn, req, res)
-	show("Finished HTTPS check")
-
-	show("Checking time to first byte")
-	client := httputil.NewClientConn(conn, nil)
-	preWrite := time.Now()
-	client.Write(req)
-	postWrite := time.Now()
-	res.WriteTime = postWrite.Sub(preWrite)
-	show("Wrote request")
-	// discard the results, this should just read the first chunk from the sock
-	client.Read(req)
-	res.FirstByte = time.Now().Sub(postWrite)
-	show("Finished checking time to first byte")
-	return res, nil
+	return formattedIP
 }
 
 func extractCertChain(state *tls.ConnectionState) map[string]certAlgPair {
@@ -148,7 +147,7 @@ func extractCertChain(state *tls.ConnectionState) map[string]certAlgPair {
 	return results
 }
 
-func resolve(host string, t *timingTransport) (*net.IP, error) {
+func resolve(host string, t *timingResults) (*net.IP, error) {
 	// host -> ip
 	preDNS := time.Now()
 	ips, err := net.LookupIP(host)
@@ -161,7 +160,7 @@ func resolve(host string, t *timingTransport) (*net.IP, error) {
 	return &ip, nil
 }
 
-func tryHTTPS(conn *net.Conn, req *http.Request, t *timingTransport) (tlsConn net.Conn, err error) {
+func tryHTTPS(conn *net.Conn, req *http.Request, t *timingResults) (tlsConn net.Conn, err error) {
 	if req.URL.Scheme == "https" {
 		preTLS := time.Now()
 		tlsConn = tls.Client(*conn, &tls.Config{ServerName: req.URL.Host})
