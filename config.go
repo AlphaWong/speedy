@@ -8,12 +8,17 @@ import (
 	rc "github.com/netlify/rabbit-client"
 )
 
-func load(filename string) (*rc.AMQPConfiguration, error) {
+type config struct {
+	DataCenter        string               `json:"data_center"`
+	AMQPConfiguration rc.AMQPConfiguration `json:"amqp_config"`
+}
+
+func load(filename string) (*config, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	cfg := new(rc.AMQPConfiguration)
+	cfg := new(config)
 	err = json.Unmarshal(data, cfg)
 	if err != nil {
 		return nil, err

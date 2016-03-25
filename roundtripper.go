@@ -13,33 +13,6 @@ import (
 	"time"
 )
 
-type certAlgPair struct {
-	PublicKeyAlgorithm string
-	SignatureAlgorithm string
-}
-
-type timingResults struct {
-	DNSResolve   time.Duration `json:"dns_resolve"`
-	FirstByte    time.Duration `json:"first_byte"`
-	CompleteLoad time.Duration `json:"complete_load"`
-	Connect      time.Duration `json:"connect"`
-	TLSHandshake time.Duration `json:"tls_handshake"`
-	WriteTime    time.Duration `json:"write_request"`
-
-	CipherSuite     string                 `json:"cipher_suite"`
-	Protocols       string                 `json:"protocols"`
-	CertificateAlgs map[string]certAlgPair `json:"certificate_algs"`
-
-	rsp *http.Response
-}
-
-type requestContext struct {
-	logger       func(string, ...interface{})
-	requestIndex int32
-	url          string
-	results      *timingResults
-}
-
 func (r *requestContext) measure() {
 	res := new(timingResults)
 	r.logger("Starting Timing")

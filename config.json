@@ -1,16 +1,19 @@
 {
-  "url": "amqps://rabbit.lo",
-  "exchange": {
-    "name":"speedy",
-    "type": "fanout"
-  },
-  "queue": {
-    "name": "incoming",
-    "binding_key": "speedy"
-  },
-  "tls_config": {
-    "cert": "/usr/local/etc/certs/speedy.pem",
-    "key": "/usr/local/etc/certs/speedy-key.pem",
-    "ca_certs": ["/usr/local/etc/certs/ca.pem"]
+  "data_center": "test",
+  "amqp_config": {
+    "url": "amqps://rabbit.lo",
+    "exchange": {
+      "name": "speedy",
+      "type": "fanout"
+    },
+    "queue": {
+      "name": "incoming",
+      "binding_key": "speedy"
+    },
+    "tls_config": {
+      "cert": "/usr/local/etc/certs/speedy.pem",
+      "key": "/usr/local/etc/certs/speedy-key.pem",
+      "ca_certs": ["/usr/local/etc/certs/ca.pem"]
+    }
   }
 }
