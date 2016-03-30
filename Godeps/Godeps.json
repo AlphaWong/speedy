@@ -1,0 +1,15 @@
+{
+	"ImportPath": "github.com/netlify/speedy",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
+	"Deps": [
+		{
+			"ImportPath": "github.com/netlify/rabbit-client",
+			"Rev": "c940131e2133976236bbc1f43e22875ee9cd9003"
+		},
+		{
+			"ImportPath": "github.com/streadway/amqp",
+			"Rev": "2e25825abdbd7752ff08b270d313b93519a0a232"
+		}
+	]
+}
