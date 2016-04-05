@@ -36,10 +36,13 @@ type timingResults struct {
 	Connect      time.Duration `json:"connect"`
 	TLSHandshake time.Duration `json:"tls_handshake"`
 	WriteTime    time.Duration `json:"write_request"`
+	ErrorMsg     string        `json:"error_msg"`
+	ErrorCode    string        `json:"error_code"`
 
 	CipherSuite     string                 `json:"cipher_suite"`
 	Protocols       string                 `json:"protocols"`
 	CertificateAlgs map[string]certAlgPair `json:"certificate_algs"`
+	IsHTTPS         bool                   `json:"is_https"`
 
 	rsp *http.Response
 }
@@ -51,10 +54,9 @@ type certAlgPair struct {
 
 // used to contain a single request, makes logging and such nice
 type requestContext struct {
-	logger       func(string, ...interface{})
-	requestIndex int32
-	url          string
-	results      *timingResults
+	logger  func(string, ...interface{})
+	url     string
+	results *timingResults
 }
 
 var client = &http.Client{}
@@ -94,10 +96,10 @@ func main() {
 	}
 }
 
-func buildLogger(url string) func(string, ...interface{}) {
+func buildLogger(url string, reqID int32) func(string, ...interface{}) {
 	return func(format string, args ...interface{}) {
 		format = "%d - %s : " + format
-		args = append([]interface{}{requestCounter, url}, args...)
+		args = append([]interface{}{reqID, url}, args...)
 
 		if !strings.HasSuffix(format, "\n") {
 			format = format + "\n"
@@ -116,7 +118,7 @@ func processOneToCmdline(url string, verbose bool) {
 	}
 
 	if verbose {
-		context.logger = buildLogger(url)
+		context.logger = buildLogger(url, 0)
 	}
 
 	context.measure()
@@ -147,35 +149,48 @@ func listenToRabbits(config *rc.AMQPConfiguration) {
 				return
 			}
 
-			// create the context around this message
-			context := requestContext{
-				logger:       buildLogger(msg.URL),
-				requestIndex: atomic.AddInt32(&requestCounter, 1),
-				url:          msg.URL,
+			originalURL := msg.URL
+
+			// now check for the other http
+			var alternateURL string
+			if strings.HasPrefix(msg.URL, "http") {
+				alternateURL = "https" + msg.URL[4:]
+			} else {
+				alternateURL = "http" + msg.URL[5:]
 			}
 
-			if msg.AuthToken == "" {
-				context.logger("No auth token provided")
-				return
-			}
-
-			done := make(chan bool)
-			go func() {
-				context.measure()
-				done <- true
-			}()
-
-			select {
-			case <-done:
-				sendResponse(msg.CallbackURL, msg.AuthToken, &context)
-			case <-time.After(time.Duration(msg.TimeoutSec) * time.Second):
-				context.logger("Timed out")
-				context.results = nil
-
-				sendResponse(msg.CallbackURL, msg.AuthToken, &context)
-			}
+			executeTest(originalURL, msg.CallbackURL, msg.AuthToken, msg.TimeoutSec)
+			executeTest(alternateURL, msg.CallbackURL, msg.AuthToken, msg.TimeoutSec)
 
 		}(&delivery)
+	}
+}
+
+func executeTest(url, callback, token string, timeout int32) {
+	context := requestContext{
+		logger: buildLogger(url, atomic.AddInt32(&requestCounter, 1)),
+		url:    url,
+	}
+
+	if token == "" {
+		context.logger("No auth token provided")
+		return
+	}
+
+	done := make(chan bool)
+	go func() {
+		context.measure()
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		sendResponse(callback, token, &context)
+	case <-time.After(time.Duration(timeout) * time.Second):
+		context.logger("Timed out")
+		context.results = nil
+
+		sendResponse(callback, token, &context)
 	}
 }
 

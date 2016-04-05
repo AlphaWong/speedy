@@ -15,6 +15,9 @@ import (
 
 func (r *requestContext) measure() {
 	res := new(timingResults)
+	r.results = res
+	res.IsHTTPS = strings.HasPrefix(r.url, "https")
+
 	r.logger("Starting Timing")
 
 	req, err := http.NewRequest("GET", r.url, nil)
@@ -36,6 +39,15 @@ func (r *requestContext) measure() {
 	preNormal := time.Now()
 	res.rsp, err = http.Get(r.url)
 	if err != nil {
+		errorCode := "failed_initial_request"
+		if strings.Contains(err.Error(), "x509") {
+			errorCode = "bad_certificates"
+		} else if strings.Contains(err.Error(), "no such host") {
+			errorCode = "no_such_host"
+		}
+
+		res.ErrorCode = errorCode
+		res.ErrorMsg = err.Error()
 		r.logger("Failed to make full request: %v", err)
 		return
 	}
@@ -48,6 +60,8 @@ func (r *requestContext) measure() {
 	r.logger("Resolving DNS")
 	rawip, err := resolve(host, res)
 	if err != nil {
+		res.ErrorCode = "failed_dns_resolve"
+		res.ErrorMsg = err.Error()
 		r.logger("Failed to make resolve %s into an ip: %v", host, err)
 		return
 	}
@@ -58,6 +72,8 @@ func (r *requestContext) measure() {
 	r.logger("Going to dial %s", directHost)
 	conn, err := net.Dial("tcp", directHost)
 	if err != nil {
+		res.ErrorCode = "failed_to_connect"
+		res.ErrorMsg = err.Error()
 		r.logger("Failed to dial %s: %v", directHost, err)
 		return
 	}
@@ -134,7 +150,9 @@ func resolve(host string, t *timingResults) (*net.IP, error) {
 }
 
 func tryHTTPS(conn *net.Conn, req *http.Request, t *timingResults) (tlsConn net.Conn, err error) {
+	t.IsHTTPS = false
 	if req.URL.Scheme == "https" {
+		t.IsHTTPS = true
 		preTLS := time.Now()
 		tlsConn = tls.Client(*conn, &tls.Config{ServerName: req.URL.Host})
 
