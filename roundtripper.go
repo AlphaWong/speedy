@@ -17,6 +17,7 @@ func (r *requestContext) measure() {
 	res := new(timingResults)
 	r.results = res
 	res.IsHTTPS = strings.HasPrefix(r.url, "https")
+	res.URL = r.url
 
 	r.logger("Starting Timing")
 

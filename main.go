@@ -38,6 +38,7 @@ type timingResults struct {
 	WriteTime    time.Duration `json:"write_request"`
 	ErrorMsg     string        `json:"error_msg"`
 	ErrorCode    string        `json:"error_code"`
+	URL          string        `json:"url"`
 
 	CipherSuite     string                 `json:"cipher_suite"`
 	Protocols       string                 `json:"protocols"`
@@ -197,7 +198,7 @@ func executeTest(url, callback, token string, timeout int32) {
 func sendResponse(url string, authToken string, context *requestContext) {
 	payload := resultPayload{
 		Status:     false,
-		DataCenter: dataCenter,
+		DataCenter: fmt.Sprintf("%s %s", dataCenter, url),
 	}
 
 	if context.results != nil {
