@@ -196,9 +196,14 @@ func executeTest(url, callback, token string, timeout int32) {
 }
 
 func sendResponse(url string, authToken string, context *requestContext) {
+	dc := fmt.Sprintf("%s-http", dataCenter)
+	if context.results.IsHTTPS {
+		dc = fmt.Sprintf("%s-https", dataCenter)
+	}
+
 	payload := resultPayload{
 		Status:     false,
-		DataCenter: fmt.Sprintf("%s %s", dataCenter, url),
+		DataCenter: dc,
 	}
 
 	if context.results != nil {
