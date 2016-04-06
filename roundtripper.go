@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -53,7 +54,22 @@ func (r *requestContext) measure() {
 		return
 	}
 	res.CompleteLoad = time.Now().Sub(preNormal)
+
 	r.logger("Completed GET request in %s", res.CompleteLoad)
+
+	defer res.rsp.Body.Close()
+
+	body, err := ioutil.ReadAll(res.rsp.Body)
+	if err != nil {
+		res.ErrorCode = "failed_to_read_request_body"
+		res.ErrorMsg = err.Error()
+		r.logger("Failed to read request body: %v", err)
+		return
+	}
+
+	res.ContentSize = len(body)
+
+	r.logger("Read request body of size %d", res.ContentSize)
 
 	// now do the partials
 	host, port := canonicalize(req.URL)
