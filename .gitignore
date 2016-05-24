@@ -4,3 +4,6 @@
 *.swp
 db/*
 build/
+
+vendor/
+speedy

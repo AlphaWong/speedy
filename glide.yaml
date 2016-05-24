@@ -1,0 +1,4 @@
+package: github.com/netlify/speedy
+import:
+- package: github.com/netlify/rabbit-client
+- package: github.com/streadway/amqp

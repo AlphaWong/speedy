@@ -1,0 +1,8 @@
+hash: b6a557336a8f8e87ead06c700030a524e6fff64993ec18a66c92d1a897e06a80
+updated: 2016-05-24T10:14:16.220972195-07:00
+imports:
+- name: github.com/netlify/rabbit-client
+  version: c940131e2133976236bbc1f43e22875ee9cd9003
+- name: github.com/streadway/amqp
+  version: 2e25825abdbd7752ff08b270d313b93519a0a232
+devImports: []
