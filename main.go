@@ -3,16 +3,20 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	rc "github.com/netlify/rabbit-client"
+	"github.com/Sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/streadway/amqp"
+
+	"github.com/netlify/messaging"
 )
+
+var rootLogger = logrus.NewEntry(logrus.StandardLogger())
 
 // what we should be sent via AMQP
 type expectedMessage struct {
@@ -56,7 +60,7 @@ type certAlgPair struct {
 
 // used to contain a single request, makes logging and such nice
 type requestContext struct {
-	logger  func(string, ...interface{})
+	logger  *logrus.Entry
 	url     string
 	results *timingResults
 }
@@ -66,61 +70,64 @@ var requestCounter int32
 var dataCenter string
 
 func main() {
-	useCmdLine := flag.Bool(
-		"cmdline",
-		false,
-		"if you want to use the commandline for the URL")
-	verbose := flag.Bool(
-		"verbose",
-		false,
-		"if you want step by step in the command line world",
-	)
-	flag.Parse()
+	var configFile string
+	var verbose bool
+	rootCmd := cobra.Command{
+		Use:   "speedy",
+		Short: "speedy will by default connect and listen for timing requests",
+		Run: func(c *cobra.Command, args []string) {
+			bindAndRun(configFile, verbose)
+		},
+	}
+	rootCmd.Flags().StringVarP(&configFile, "config", "c", "config.json", "the config to use")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "to enable more logging")
 
-	cmdLineVal := flag.Args()[0]
-	if *useCmdLine {
-		if len(flag.Args()) != 1 {
-			panic(fmt.Errorf("Must provide a URL\n"))
-		}
+	// so we can call it from the command line
+	singleQuery := cobra.Command{
+		Use:   "query",
+		Short: "query will execute a query using the url on the command line",
+		Run: func(c *cobra.Command, args []string) {
+			if len(args) != 1 {
+				rootLogger.Fatal("Must provide a URL to query")
+			}
 
-		processOneToCmdline(cmdLineVal, *verbose)
-	} else {
-		if len(flag.Args()) != 1 {
-			panic(fmt.Errorf("Must provide a filename\n"))
-		}
+			processOneToCmdline(args[0], verbose)
+		},
+	}
+	rootCmd.AddCommand(&singleQuery)
 
-		config, err := load(cmdLineVal)
-		if err != nil {
-			panic(err)
-		}
-		dataCenter = config.DataCenter
-		listenToRabbits(&config.AMQPConfiguration)
+	logrus.SetLevel(logrus.InfoLevel)
+	err := rootCmd.Execute()
+	if err != nil {
+		rootLogger.WithError(err).Fatal("Failed to run speedy")
 	}
 }
-
-func buildLogger(url string, reqID int32) func(string, ...interface{}) {
-	return func(format string, args ...interface{}) {
-		format = "%d - %s : " + format
-		args = append([]interface{}{reqID, url}, args...)
-
-		if !strings.HasSuffix(format, "\n") {
-			format = format + "\n"
-		}
-		fmt.Printf(format, args...)
+func bindAndRun(configFile string, verbose bool) {
+	if verbose {
+		logrus.SetLevel(logrus.DebugLevel)
 	}
-}
 
-var silentLogger = func(string, ...interface{}) {}
+	config, err := load(configFile)
+	if err != nil {
+		panic(err)
+	}
+	dataCenter = config.DataCenter
+	rootLogger = rootLogger.WithField("datacenter", config.DataCenter)
+
+	listenToRabbits(config)
+}
 
 // just dump the values to the cmdline
 func processOneToCmdline(url string, verbose bool) {
-	context := requestContext{
-		url:    url,
-		logger: silentLogger,
+	if verbose {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.WarnLevel)
 	}
 
-	if verbose {
-		context.logger = buildLogger(url, 0)
+	context := requestContext{
+		url:    url,
+		logger: rootLogger,
 	}
 
 	context.measure()
@@ -135,12 +142,43 @@ func processOneToCmdline(url string, verbose bool) {
 }
 
 // start listening forever to the rabbitmq server specified
-func listenToRabbits(config *rc.AMQPConfiguration) {
-	incomingDelivery, err := rc.NewConsumer(config)
+func listenToRabbits(config *speedyConfig) {
+	rabbitConfig := new(messaging.RabbitConfig)
+	rabbitConfig.CertFile = config.AMQPConfig.TLSConfig.CertFile
+	rabbitConfig.KeyFile = config.AMQPConfig.TLSConfig.KeyFile
+	rabbitConfig.CAFiles = config.AMQPConfig.TLSConfig.CAFiles
+	rabbitConfig.URL = config.AMQPConfig.URL
+
+	rootLogger.WithFields(logrus.Fields{
+		"url":       rabbitConfig.URL,
+		"cert_file": rabbitConfig.CertFile,
+		"ca_files":  rabbitConfig.CAFiles,
+		"key_file":  rabbitConfig.KeyFile,
+	}).Debug("Connecting to rabbitmq")
+
+	conn, err := messaging.ConnectToRabbit(rabbitConfig)
 	if err != nil {
-		panic(err)
+		rootLogger.WithError(err).Fatal("Failed to connect to rabbits")
 	}
 
+	rootLogger.WithFields(logrus.Fields{
+		"exchange":      config.AMQPConfig.Exchange.Name,
+		"exchange_type": config.AMQPConfig.Exchange.Type,
+		"queue":         config.AMQPConfig.Queue.Name,
+		"binding_key":   config.AMQPConfig.Queue.BindingKey,
+	}).Debug("binding to exchange and queue")
+	c, _, err := messaging.Bind(conn, &config.AMQPConfig.Exchange, &config.AMQPConfig.Queue)
+	if err != nil {
+		rootLogger.WithError(err).Fatal("Failed to bind exchange and queue")
+	}
+
+	rootLogger.Debug("getting delivery channel")
+	incomingDelivery, err := messaging.Consume(c, messaging.NewDeliveryDefinition(config.AMQPConfig.Queue.Name))
+	if err != nil {
+		rootLogger.WithError(err).Fatal("Failed to get delivery channel")
+	}
+
+	rootLogger.Debug("Consuming forever")
 	for delivery := range incomingDelivery {
 		go func(d *amqp.Delivery) {
 			d.Ack(true) // can't do anything if we fail anyways
@@ -170,12 +208,15 @@ func listenToRabbits(config *rc.AMQPConfiguration) {
 
 func executeTest(url, callback, token string, timeout int32) {
 	context := requestContext{
-		logger: buildLogger(url, atomic.AddInt32(&requestCounter, 1)),
-		url:    url,
+		logger: rootLogger.WithFields(logrus.Fields{
+			"url":           url,
+			"request_count": atomic.AddInt32(&requestCounter, 1),
+		}),
+		url: url,
 	}
 
 	if token == "" {
-		context.logger("No auth token provided")
+		context.logger.Warn("No auth token provided")
 		return
 	}
 
@@ -189,7 +230,7 @@ func executeTest(url, callback, token string, timeout int32) {
 	case <-done:
 		sendResponse(callback, token, &context)
 	case <-time.After(time.Duration(timeout) * time.Second):
-		context.logger("Timed out")
+		context.logger.Warn("Timed out")
 		context.results = nil
 
 		sendResponse(callback, token, &context)
@@ -220,7 +261,7 @@ func sendResponse(url string, authToken string, context *requestContext) {
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(asBytes))
 	if err != nil {
-		context.logger("Failed to build request to %s. error: %v", url, err)
+		context.logger.Errorf("Failed to build request to %s. error: %v", url, err)
 		return
 	}
 
@@ -229,10 +270,10 @@ func sendResponse(url string, authToken string, context *requestContext) {
 
 	rsp, err := client.Do(req)
 	if err != nil {
-		context.logger("Failed to do response: %v", err)
+		context.logger.Errorf("Failed to do response: %v", err)
 		return
 	}
 
 	defer rsp.Body.Close()
-	context.logger("Finished responding status is: %s", rsp.Status)
+	context.logger.Infof("Finished responding status is: %s", rsp.Status)
 }

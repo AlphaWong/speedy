@@ -1,8 +1,26 @@
-hash: b6a557336a8f8e87ead06c700030a524e6fff64993ec18a66c92d1a897e06a80
-updated: 2016-05-24T10:14:16.220972195-07:00
+hash: 9ee689b56268898da695ecec1600f67fe9dca9e6fda3d1b9a0cffc6b4df37a74
+updated: 2016-05-24T11:32:20.28186162-07:00
 imports:
-- name: github.com/netlify/rabbit-client
-  version: c940131e2133976236bbc1f43e22875ee9cd9003
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/nats-io/nats
+  version: fc85f44c1659ab6610d76fd6bd0e44ad2cadf697
+  subpackages:
+  - encoders/builtin
+- name: github.com/nats-io/nuid
+  version: a5152d67cf63cbfb5d992a395458722a45194715
+- name: github.com/netlify/messaging
+  version: bbfdc4308f73ca41c0a872bd0ae7181c1bf29ed2
+- name: github.com/Sirupsen/logrus
+  version: 6d9ae300aaf85d6acd2e5424081c7fcddb21dab8
+- name: github.com/spf13/cobra
+  version: f368244301305f414206f889b1735a54cfc8bde8
+- name: github.com/spf13/pflag
+  version: cb88ea77998c3f024757528e3305022ab50b43be
 - name: github.com/streadway/amqp
   version: 2e25825abdbd7752ff08b270d313b93519a0a232
+- name: golang.org/x/sys
+  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  subpackages:
+  - unix
 devImports: []

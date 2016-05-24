@@ -20,24 +20,24 @@ func (r *requestContext) measure() {
 	res.IsHTTPS = strings.HasPrefix(r.url, "https")
 	res.URL = r.url
 
-	r.logger("Starting Timing")
+	r.logger.Infof("Starting Timing")
 
 	req, err := http.NewRequest("GET", r.url, nil)
 	if err != nil {
-		r.logger("Failed to build request: %v", err)
+		r.logger.Errorf("Failed to build request: %v", err)
 		return
 	}
 
-	r.logger("Validating request")
+	r.logger.Infof("Validating request")
 	err = validateRequest(req)
 	if err != nil {
-		r.logger("Failed to validate request: %v", err)
+		r.logger.Errorf("Failed to validate request: %v", err)
 		return
 	}
-	r.logger("Request is valid")
+	r.logger.Infof("Request is valid")
 
 	// now just do a normal request
-	r.logger("Making full GET request")
+	r.logger.Infof("Making full GET request")
 	preNormal := time.Now()
 	res.rsp, err = http.Get(r.url)
 	if err != nil {
@@ -50,12 +50,12 @@ func (r *requestContext) measure() {
 
 		res.ErrorCode = errorCode
 		res.ErrorMsg = err.Error()
-		r.logger("Failed to make full request: %v", err)
+		r.logger.Errorf("Failed to make full request: %v", err)
 		return
 	}
 	res.CompleteLoad = time.Now().Sub(preNormal)
 
-	r.logger("Completed GET request in %s", res.CompleteLoad)
+	r.logger.Infof("Completed GET request in %s", res.CompleteLoad)
 
 	defer res.rsp.Body.Close()
 
@@ -63,54 +63,54 @@ func (r *requestContext) measure() {
 	if err != nil {
 		res.ErrorCode = "failed_to_read_request_body"
 		res.ErrorMsg = err.Error()
-		r.logger("Failed to read request body: %v", err)
+		r.logger.Errorf("Failed to read request body: %v", err)
 		return
 	}
 
 	res.ContentSize = len(body)
 
-	r.logger("Read request body of size %d", res.ContentSize)
+	r.logger.Infof("Read request body of size %d", res.ContentSize)
 
 	// now do the partials
 	host, port := canonicalize(req.URL)
 
-	r.logger("Resolving DNS")
+	r.logger.Infof("Resolving DNS")
 	rawip, err := resolve(host, res)
 	if err != nil {
 		res.ErrorCode = "failed_dns_resolve"
 		res.ErrorMsg = err.Error()
-		r.logger("Failed to make resolve %s into an ip: %v", host, err)
+		r.logger.Errorf("Failed to make resolve %s into an ip: %v", host, err)
 		return
 	}
 
-	r.logger("DNS successful: %s", rawip)
+	r.logger.Infof("DNS successful: %s", rawip)
 
 	directHost := formatURL(rawip, port)
-	r.logger("Going to dial %s", directHost)
+	r.logger.Infof("Going to dial %s", directHost)
 	conn, err := net.Dial("tcp", directHost)
 	if err != nil {
 		res.ErrorCode = "failed_to_connect"
 		res.ErrorMsg = err.Error()
-		r.logger("Failed to dial %s: %v", directHost, err)
+		r.logger.Errorf("Failed to dial %s: %v", directHost, err)
 		return
 	}
-	r.logger("Finished dialing")
+	r.logger.Infof("Finished dialing")
 
-	r.logger("Checking HTTPS certs")
+	r.logger.Infof("Checking HTTPS certs")
 	tryHTTPS(&conn, req, res)
-	r.logger("Finished HTTPS check")
+	r.logger.Infof("Finished HTTPS check")
 
-	r.logger("Checking time to first byte")
+	r.logger.Infof("Checking time to first byte")
 	client := httputil.NewClientConn(conn, nil)
 	preWrite := time.Now()
 	client.Write(req)
 	postWrite := time.Now()
 	res.WriteTime = postWrite.Sub(preWrite)
-	r.logger("Wrote request")
+	r.logger.Infof("Wrote request")
 	// discard the results, this should just read the first chunk from the sock
 	client.Read(req)
 	res.FirstByte = time.Now().Sub(postWrite)
-	r.logger("Finished checking time to first byte")
+	r.logger.Infof("Finished checking time to first byte")
 
 	r.results = res
 }
