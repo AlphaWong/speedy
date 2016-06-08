@@ -3,15 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
-	"sync/atomic"
 	"time"
 
-	rc "github.com/netlify/rabbit-client"
-	"github.com/streadway/amqp"
+	"github.com/Sirupsen/logrus"
+	"github.com/labstack/gommon/log"
+	"github.com/netlify/messaging"
+	"github.com/spf13/cobra"
 )
 
 // what we should be sent via AMQP
@@ -45,6 +47,7 @@ type timingResults struct {
 	Protocols       string                 `json:"protocols"`
 	CertificateAlgs map[string]certAlgPair `json:"certificate_algs"`
 	IsHTTPS         bool                   `json:"is_https"`
+	HTTPVersion     string                 `json:"http_version"`
 
 	rsp *http.Response
 }
@@ -56,9 +59,12 @@ type certAlgPair struct {
 
 // used to contain a single request, makes logging and such nice
 type requestContext struct {
-	logger  func(string, ...interface{})
-	url     string
-	results *timingResults
+	logger      *logrus.Entry
+	url         string
+	callbackURL string
+	authToken   string
+	timeoutSec  int32
+	results     *timingResults
 }
 
 var client = &http.Client{}
@@ -66,61 +72,50 @@ var requestCounter int32
 var dataCenter string
 
 func main() {
-	useCmdLine := flag.Bool(
-		"cmdline",
-		false,
-		"if you want to use the commandline for the URL")
-	verbose := flag.Bool(
-		"verbose",
-		false,
-		"if you want step by step in the command line world",
-	)
-	flag.Parse()
 
-	cmdLineVal := flag.Args()[0]
-	if *useCmdLine {
-		if len(flag.Args()) != 1 {
-			panic(fmt.Errorf("Must provide a URL\n"))
-		}
+	var configFile string
 
-		processOneToCmdline(cmdLineVal, *verbose)
-	} else {
-		if len(flag.Args()) != 1 {
-			panic(fmt.Errorf("Must provide a filename\n"))
-		}
+	rootCmd := cobra.Command{
+		Use:   "speedy",
+		Short: "speedy will hook up to rabbitmq and then post the results back to the origin",
+		Run: func(cmd *cobra.Command, args []string) {
+			processForever(configFile)
+		},
+	}
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "config.json", "the config file to use")
 
-		config, err := load(cmdLineVal)
-		if err != nil {
-			panic(err)
-		}
-		dataCenter = config.DataCenter
-		listenToRabbits(&config.AMQPConfiguration)
+	var enableDebug bool
+
+	cmdLineCmd := cobra.Command{
+		Use:   "single",
+		Short: "single <url>",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				log.Fatal("Must provide a URL to search")
+			}
+			processOneToCmdline(args[0], enableDebug)
+		},
+	}
+	cmdLineCmd.Flags().BoolVarP(&enableDebug, "verbose", "v", false, "if verbose logging is enabled")
+	rootCmd.AddCommand(&cmdLineCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatalf("Error running command: %s", err)
 	}
 }
-
-func buildLogger(url string, reqID int32) func(string, ...interface{}) {
-	return func(format string, args ...interface{}) {
-		format = "%d - %s : " + format
-		args = append([]interface{}{reqID, url}, args...)
-
-		if !strings.HasSuffix(format, "\n") {
-			format = format + "\n"
-		}
-		fmt.Printf(format, args...)
-	}
-}
-
-var silentLogger = func(string, ...interface{}) {}
 
 // just dump the values to the cmdline
 func processOneToCmdline(url string, verbose bool) {
 	context := requestContext{
 		url:    url,
-		logger: silentLogger,
+		logger: logrus.StandardLogger().WithField("url", url),
 	}
 
 	if verbose {
-		context.logger = buildLogger(url, 0)
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetOutput(ioutil.Discard)
+		logrus.SetLevel(logrus.WarnLevel)
 	}
 
 	context.measure()
@@ -134,48 +129,101 @@ func processOneToCmdline(url string, verbose bool) {
 	}
 }
 
-// start listening forever to the rabbitmq server specified
-func listenToRabbits(config *rc.AMQPConfiguration) {
-	incomingDelivery, err := rc.NewConsumer(config)
+func processForever(configFile string) {
+	config, err := load(configFile)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to load config file: %s - %s", configFile, err)
 	}
 
-	for delivery := range incomingDelivery {
-		go func(d *amqp.Delivery) {
-			d.Ack(true) // can't do anything if we fail anyways
+	logger, err := configureLogging(config.LogConf)
+	if err != nil {
+		log.Fatalf("Failed to configure logging : %s", err)
+	}
 
-			msg := new(expectedMessage)
-			if err = json.Unmarshal(d.Body, msg); err != nil {
-				fmt.Printf("Failed to unmarshal body %s, %v\n", string(d.Body), err)
-				return
-			}
+	dataCenter = config.DataCenter
 
-			originalURL := msg.URL
+	logger = logger.WithField("data_center", dataCenter)
+	logger.Info("Starting speedy")
 
-			// now check for the other http
-			var alternateURL string
-			if strings.HasPrefix(msg.URL, "http") {
-				alternateURL = "https" + msg.URL[4:]
-			} else {
-				alternateURL = "http" + msg.URL[5:]
-			}
+	rConf := config.AMQPConf
 
-			executeTest(originalURL, msg.CallbackURL, msg.AuthToken, msg.TimeoutSec)
-			executeTest(alternateURL, msg.CallbackURL, msg.AuthToken, msg.TimeoutSec)
+	// connect
+	rc, err := messaging.ConnectToRabbit(&rConf.RabbitConfig)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to connect to rabbits")
+	}
+	logger.WithField("rabbit_url", rConf.URL).Info("Connected to rabbit broker")
 
-		}(&delivery)
+	// bind
+	c, q, err := messaging.Bind(rc, &rConf.Exchange, &rConf.Queue)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to bind to exchange/queue")
+	}
+	logger.WithFields(logrus.Fields{
+		"exchange":    rConf.Exchange.Name,
+		"queue":       rConf.Queue.Name,
+		"binding_key": rConf.Queue.BindingKey,
+	}).Info("Bound to exchange and queue")
+
+	// consume
+	deliveries, err := messaging.Consume(c, messaging.NewDeliveryDefinition(q.Name))
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to get delivery channel")
+	}
+
+	logger.Info("Starting to consume incoming deliveries forever")
+
+	for d := range deliveries {
+		go processRequest(d.Body, logger)
+		d.Ack(true)
+		d.Ack(true) // can't do anything if we fail anyways
 	}
 }
 
-func executeTest(url, callback, token string, timeout int32) {
-	context := requestContext{
-		logger: buildLogger(url, atomic.AddInt32(&requestCounter, 1)),
-		url:    url,
+func processRequest(body []byte, logger *logrus.Entry) {
+	msg := new(expectedMessage)
+	if err := json.Unmarshal(body, msg); err != nil {
+		logger.WithError(err).Warn("Failed to unmarshal incoming request")
+		return
 	}
 
-	if token == "" {
-		context.logger("No auth token provided")
+	originalURL := msg.URL
+
+	// now check for the other http
+	var alternateURL string
+	if strings.HasPrefix(msg.URL, "http") {
+		alternateURL = "https" + msg.URL[4:]
+	} else {
+		alternateURL = "http" + msg.URL[5:]
+	}
+
+	requestID := rand.Int31()
+
+	executeTest(&requestContext{
+		url: originalURL,
+		logger: logger.WithFields(logrus.Fields{
+			"url":        originalURL,
+			"request_id": requestID,
+		}),
+		callbackURL: msg.CallbackURL,
+		authToken:   msg.AuthToken,
+		timeoutSec:  msg.TimeoutSec,
+	})
+	executeTest(&requestContext{
+		url: alternateURL,
+		logger: logger.WithFields(logrus.Fields{
+			"url":        alternateURL,
+			"request_id": requestID,
+		}),
+		callbackURL: msg.CallbackURL,
+		authToken:   msg.AuthToken,
+		timeoutSec:  msg.TimeoutSec,
+	})
+}
+
+func executeTest(context *requestContext) {
+	if context.authToken == "" {
+		context.logger.Warn("No auth token provided")
 		return
 	}
 
@@ -187,20 +235,24 @@ func executeTest(url, callback, token string, timeout int32) {
 
 	select {
 	case <-done:
-		sendResponse(callback, token, &context)
-	case <-time.After(time.Duration(timeout) * time.Second):
-		context.logger("Timed out")
+		sendResponse(context)
+	case <-time.After(time.Duration(context.timeoutSec) * time.Second):
+		context.logger.Warn("Timed out")
 		context.results = nil
 
-		sendResponse(callback, token, &context)
+		sendResponse(context)
 	}
 }
 
-func sendResponse(url string, authToken string, context *requestContext) {
+func sendResponse(context *requestContext) {
 	dc := fmt.Sprintf("%s-http", dataCenter)
 	if context.results.IsHTTPS {
 		dc = fmt.Sprintf("%s-https", dataCenter)
 	}
+	errlog := context.logger.WithFields(logrus.Fields{
+		"callback_url": context.callbackURL,
+		"data_center":  dc,
+	})
 
 	payload := resultPayload{
 		Status:     false,
@@ -214,25 +266,25 @@ func sendResponse(url string, authToken string, context *requestContext) {
 
 	asBytes, err := json.Marshal(&payload)
 	if err != nil {
-		fmt.Printf("Failed to marshal payload to %s: %v. error: %v", url, payload, err)
+		errlog.WithError(err).Warnf("Failed to marshal payload.")
 		return
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(asBytes))
+	req, err := http.NewRequest(http.MethodPatch, context.callbackURL, bytes.NewBuffer(asBytes))
 	if err != nil {
-		context.logger("Failed to build request to %s. error: %v", url, err)
+		errlog.WithError(err).Warn("Failed to build request")
 		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Auth-Token", authToken)
+	req.Header.Set("X-Auth-Token", context.authToken)
 
 	rsp, err := client.Do(req)
 	if err != nil {
-		context.logger("Failed to do response: %v", err)
+		errlog.WithError(err).Warn("Failed to do request")
 		return
 	}
 
 	defer rsp.Body.Close()
-	context.logger("Finished responding status is: %s", rsp.Status)
+	context.logger.WithField("status", rsp.Status).Infof("Finished responding status is: %s", rsp.Status)
 }
