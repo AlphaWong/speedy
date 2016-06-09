@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/labstack/gommon/log"
 	"github.com/netlify/messaging"
@@ -69,9 +67,12 @@ type requestContext struct {
 	results     *timingResults
 }
 
-var client = &http.Client{
-	Transport: &http2.Transport{},
-}
+// This is what is needed but it breaks glide: https://github.com/netlify/speedy/issues/4
+// var client = &http.Client{
+// 	Transport: &http2.Transport{},
+// }
+
+var client = &http.Client{}
 var requestCounter int32
 var dataCenter string
 
