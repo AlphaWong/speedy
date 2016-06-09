@@ -1,17 +1,18 @@
 {
   "data_center": "test",
   "amqp_config": {
-    "url": "amqps://rabbit.lo",
+    "url": "amqps://rabbit.lo/bitballoon",
     "cert_file": "/usr/local/etc/certs/speedy.pem",
     "key_file": "/usr/local/etc/certs/speedy-key.pem",
     "ca_files": ["/usr/local/etc/certs/ca.pem"],
     "exchange": {
       "name": "speedy",
       "type": "fanout",
-      "durable": true
+      "durable": true,
+      "auto_delete": true
     },
     "queue": {
-      "name": "incoming",
+      "name": "speedy-local",
       "binding_key": "speedy"
     }
   },

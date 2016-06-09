@@ -53,6 +53,9 @@ func configureLogging(cfg logConfiguration) (*logrus.Entry, error) {
 
 		logrus.AddHook(hook)
 	}
-
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:    true,
+		DisableTimestamp: false,
+	})
 	return logrus.StandardLogger().WithField("hostname", hostname), nil
 }

@@ -175,9 +175,9 @@ func processForever(configFile string) {
 
 	for d := range deliveries {
 		go processRequest(d.Body, logger)
-		d.Ack(true)
 		d.Ack(true) // can't do anything if we fail anyways
 	}
+	logger.Warn("Exited - probably shouldn't have")
 }
 
 func processRequest(body []byte, logger *logrus.Entry) {

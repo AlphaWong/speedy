@@ -55,7 +55,7 @@ func (r *requestContext) measure() {
 	}
 	res.CompleteLoad = time.Now().Sub(preNormal)
 
-	r.logger.Info("Completed GET request in %s", res.CompleteLoad)
+	r.logger.Infof("Completed GET request in %s", res.CompleteLoad)
 
 	defer res.rsp.Body.Close()
 
@@ -69,7 +69,7 @@ func (r *requestContext) measure() {
 
 	res.ContentSize = len(body)
 
-	r.logger.Info("Read request body of size %d", res.ContentSize)
+	r.logger.Infof("Read request body of size %d", res.ContentSize)
 
 	// now do the partials
 	host, port := canonicalize(req.URL)
@@ -83,7 +83,7 @@ func (r *requestContext) measure() {
 		return
 	}
 
-	r.logger.Info("DNS successful: %s", rawip)
+	r.logger.Infof("DNS successful: %s", rawip)
 
 	directHost := formatURL(rawip, port)
 	r.logger.Infof("Going to dial %s", directHost)
@@ -91,7 +91,7 @@ func (r *requestContext) measure() {
 	if err != nil {
 		res.ErrorCode = "failed_to_connect"
 		res.ErrorMsg = err.Error()
-		r.logger.WithError(err).Warnf("Failed to dial %s")
+		r.logger.WithError(err).Warnf("Failed to dial")
 		return
 	}
 	r.logger.Info("Finished dialing")
