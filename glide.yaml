@@ -6,3 +6,6 @@ import:
   - log
 - package: github.com/netlify/messaging
 - package: github.com/spf13/cobra
+- package: golang.org/x/net
+  subpackages:
+  - http2
