@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/labstack/gommon/log"
 	"github.com/netlify/messaging"
@@ -47,7 +49,7 @@ type timingResults struct {
 	Protocols       string                 `json:"protocols"`
 	CertificateAlgs map[string]certAlgPair `json:"certificate_algs"`
 	IsHTTPS         bool                   `json:"is_https"`
-	HTTPVersion     string                 `json:"http_version"`
+	IsHTTP2         bool                   `json:"is_http_2"`
 
 	rsp *http.Response
 }
@@ -67,7 +69,9 @@ type requestContext struct {
 	results     *timingResults
 }
 
-var client = &http.Client{}
+var client = &http.Client{
+	Transport: &http2.Transport{},
+}
 var requestCounter int32
 var dataCenter string
 

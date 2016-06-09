@@ -38,8 +38,9 @@ func (r *requestContext) measure() {
 
 	// now just do a normal request
 	r.logger.Info("Making full GET request")
+
 	preNormal := time.Now()
-	res.rsp, err = http.Get(r.url)
+	res.rsp, err = client.Do(req)
 	if err != nil {
 		errorCode := "failed_initial_request"
 		if strings.Contains(err.Error(), "x509") {
@@ -55,6 +56,7 @@ func (r *requestContext) measure() {
 	}
 	res.CompleteLoad = time.Now().Sub(preNormal)
 
+	res.IsHTTP2 = res.rsp.ProtoMajor == 2
 	r.logger.Infof("Completed GET request in %s", res.CompleteLoad)
 
 	defer res.rsp.Body.Close()
@@ -187,7 +189,6 @@ func tryHTTPS(conn *net.Conn, req *http.Request, t *timingResults) (tlsConn net.
 		t.CertificateAlgs = extractCertChain(&state)
 
 		t.TLSHandshake = time.Now().Sub(preTLS)
-		t.HTTPVersion = fmt.Sprintf("%d.%d", req.ProtoMajor, req.ProtoMinor)
 	}
 
 	return
