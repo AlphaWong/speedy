@@ -84,7 +84,7 @@ func (r *requestContext) measure() {
 		r.logger.WithError(err).Warnf("Failed to make resolve %s into an ip")
 		return
 	}
-
+	res.RawIP = fmt.Sprintf("%s", rawip)
 	r.logger.Infof("DNS successful: %s", rawip)
 
 	directHost := formatURL(rawip, port)

@@ -42,6 +42,7 @@ type timingResults struct {
 	ErrorCode    string        `json:"error_code"`
 	URL          string        `json:"url"`
 	ContentSize  int           `json:"content_size"`
+	RawIP        string        `json:"raw_ip"`
 
 	CipherSuite     string                 `json:"cipher_suite"`
 	Protocols       string                 `json:"protocols"`
