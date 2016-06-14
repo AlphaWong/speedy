@@ -55,6 +55,7 @@ func (r *requestContext) measure() {
 		return
 	}
 	res.CompleteLoad = time.Now().Sub(preNormal)
+	res.IsNetlifySite = checkIfNetlifySite(res.rsp)
 
 	res.IsHTTP2 = res.rsp.ProtoMajor == 2
 	r.logger.Infof("Completed GET request in %s", res.CompleteLoad)
@@ -246,6 +247,16 @@ func convertAlgorithm(p x509.PublicKeyAlgorithm) string {
 	}
 
 	return "UNKNOWN"
+}
+
+func checkIfNetlifySite(rsp *http.Response) bool {
+	switch strings.ToLower(rsp.Header.Get("server")) {
+	case "netlify":
+		return true
+	case "bitballoon":
+		return true
+	}
+	return false
 }
 
 func validateRequest(req *http.Request) error {

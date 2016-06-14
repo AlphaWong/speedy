@@ -32,17 +32,18 @@ type resultPayload struct {
 }
 
 type timingResults struct {
-	DNSResolve   time.Duration `json:"dns_resolve"`
-	FirstByte    time.Duration `json:"first_byte"`
-	CompleteLoad time.Duration `json:"complete_load"`
-	Connect      time.Duration `json:"connect"`
-	TLSHandshake time.Duration `json:"tls_handshake"`
-	WriteTime    time.Duration `json:"write_request"`
-	ErrorMsg     string        `json:"error_msg"`
-	ErrorCode    string        `json:"error_code"`
-	URL          string        `json:"url"`
-	ContentSize  int           `json:"content_size"`
-	RawIP        string        `json:"raw_ip"`
+	DNSResolve    time.Duration `json:"dns_resolve"`
+	FirstByte     time.Duration `json:"first_byte"`
+	CompleteLoad  time.Duration `json:"complete_load"`
+	Connect       time.Duration `json:"connect"`
+	TLSHandshake  time.Duration `json:"tls_handshake"`
+	WriteTime     time.Duration `json:"write_request"`
+	ErrorMsg      string        `json:"error_msg"`
+	ErrorCode     string        `json:"error_code"`
+	URL           string        `json:"url"`
+	ContentSize   int           `json:"content_size"`
+	RawIP         string        `json:"raw_ip"`
+	IsNetlifySite bool          `json:"is_netlify_site"`
 
 	CipherSuite     string                 `json:"cipher_suite"`
 	Protocols       string                 `json:"protocols"`
