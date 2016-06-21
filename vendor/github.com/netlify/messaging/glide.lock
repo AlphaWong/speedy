@@ -1,0 +1,31 @@
+hash: 947fea5978925ce92c6a2b998f3a99bd6898907e947ecd49159fcbf72b6151e4
+updated: 2016-05-20T11:34:19.332086292-07:00
+imports:
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/nats-io/nats
+  version: fc85f44c1659ab6610d76fd6bd0e44ad2cadf697
+  subpackages:
+  - encoders/builtin
+- name: github.com/nats-io/nuid
+  version: a5152d67cf63cbfb5d992a395458722a45194715
+- name: github.com/netlify/util
+  version: 2047d86800ca5b4fd253c7af79037c0dec8e0663
+  subpackages:
+  - nats-client/cmd
+  - config
+  - logger
+  - nats
+- name: github.com/Sirupsen/logrus
+  version: cd7d1bbe41066b6c1f19780f895901052150a575
+- name: github.com/spf13/cobra
+  version: f368244301305f414206f889b1735a54cfc8bde8
+- name: github.com/spf13/pflag
+  version: cb88ea77998c3f024757528e3305022ab50b43be
+- name: github.com/streadway/amqp
+  version: 2e25825abdbd7752ff08b270d313b93519a0a232
+- name: golang.org/x/sys
+  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  subpackages:
+  - unix
+devImports: []

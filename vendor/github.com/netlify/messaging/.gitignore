@@ -1,0 +1,8 @@
+.DS_Store
+*.bk
+*.pyc
+*.swp
+db/*
+
+vendor/
+nats-client/nats-client

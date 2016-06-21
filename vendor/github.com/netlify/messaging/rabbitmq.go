@@ -1,24 +1,11 @@
 package messaging
 
-import (
-	"crypto/tls"
-	"errors"
-	"fmt"
-	"math/rand"
-	"strings"
-	"time"
-
-	"github.com/streadway/amqp"
-)
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+import "github.com/streadway/amqp"
 
 // RabbitConfig defines all that is necessary to connect to a
 type RabbitConfig struct {
 	tlsDefinition
-	Servers []string `json:"servers"`
+	URL string `json:"url"`
 }
 
 // ExchangeDefinition defines all the parameters for an exchange
@@ -104,43 +91,7 @@ func ConnectToRabbit(config *RabbitConfig) (*amqp.Connection, error) {
 		return nil, err
 	}
 
-	if len(config.Servers) == 0 {
-		return nil, errors.New("missing RabbitMQ servers in the configuration")
-	}
-
-	if len(config.Servers) == 1 {
-		return amqp.DialTLS(config.Servers[0], tlsConfig)
-	}
-
-	return connectToCluster(config.Servers, tlsConfig)
-}
-
-func connectToCluster(addresses []string, tlsConfig *tls.Config) (*amqp.Connection, error) {
-	// shuffle addresses
-	length := len(addresses) - 1
-	for i := length; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		addresses[i], addresses[j] = addresses[j], addresses[i]
-	}
-
-	// try to connect one address at a time
-	// and fallback to the next connection
-	// if there is any error dialing in.
-	for i, addr := range addresses {
-		c, err := amqp.DialTLS(addr, tlsConfig)
-		if err != nil {
-			if i == length {
-				return nil, err
-			}
-			continue
-		}
-
-		if c != nil {
-			return c, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to connect to the RabbitMQ cluster: %s", strings.Join(addresses, ", "))
+	return amqp.DialTLS(config.URL, tlsConfig)
 }
 
 // BindWithDefaults will simplify the binding to use sane defaults

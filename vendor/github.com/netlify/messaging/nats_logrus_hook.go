@@ -1,19 +1,11 @@
 package messaging
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/nats-io/nats"
 )
-
-// HookConf defines the vars needed to connect to nats and add the logrus hook
-type HookConf struct {
-	NatsConfig
-	Subject    string            `json:"subject"`
-	Dimensions map[string]string `json:"dimensions"`
-}
 
 // NatsHook will emit logs to the subject provided
 type NatsHook struct {
@@ -24,31 +16,6 @@ type NatsHook struct {
 	formatter     logrus.Formatter
 
 	LogLevels []logrus.Level
-}
-
-// AddNatsHook will connect to nats, add the hook to logrus, and percolate any errors up
-func AddNatsHook(conf *HookConf) (*nats.Conn, *NatsHook, error) {
-	if conf.Subject == "" {
-		return nil, nil, errors.New("Must provide a subject for the nats hook")
-	}
-
-	nc, err := ConnectToNats(&conf.NatsConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	hook, err := NewNatsHook(nc, conf.Subject)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for k, v := range conf.Dimensions {
-		hook.AddField(k, v)
-	}
-
-	logrus.AddHook(hook)
-
-	return nc, hook, nil
 }
 
 // NewNatsHook will create a logrus hook that will automatically send

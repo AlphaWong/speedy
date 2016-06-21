@@ -1,0 +1,6 @@
+{
+  "url": "amqps://rabbit.lo",
+  "cert_file": "/usr/local/etc/certs/test.pem",
+  "key_file":  "/usr/local/etc/certs/test-key.pem",
+  "ca_files": ["/usr/local/etc/certs/ca.pem"]
+}
