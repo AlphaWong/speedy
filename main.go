@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/labstack/gommon/log"
 	"github.com/netlify/messaging"
@@ -70,11 +72,11 @@ type requestContext struct {
 }
 
 // This is what is needed but it breaks glide: https://github.com/netlify/speedy/issues/4
-// var client = &http.Client{
-// 	Transport: &http2.Transport{},
-// }
+var http2Client = &http.Client{
+	Transport: &http2.Transport{},
+}
+var httpClient = &http.Client{}
 
-var client = &http.Client{}
 var requestCounter int32
 var dataCenter string
 
@@ -159,7 +161,6 @@ func processForever(configFile string) {
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to connect to rabbits")
 	}
-	logger.WithField("rabbit_url", rConf.URL).Info("Connected to rabbit broker")
 
 	// bind
 	c, q, err := messaging.Bind(rc, &rConf.Exchange, &rConf.Queue)
@@ -285,6 +286,11 @@ func sendResponse(context *requestContext) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Auth-Token", context.authToken)
+
+	client := httpClient
+	if req.URL.Scheme == "https" {
+		client = http2Client
+	}
 
 	rsp, err := client.Do(req)
 	if err != nil {

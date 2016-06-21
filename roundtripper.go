@@ -40,6 +40,12 @@ func (r *requestContext) measure() {
 	r.logger.Info("Making full GET request")
 
 	preNormal := time.Now()
+
+	client := httpClient
+	if req.URL.Scheme == "https" {
+		client = http2Client
+	}
+
 	res.rsp, err = client.Do(req)
 	if err != nil {
 		errorCode := "failed_initial_request"
@@ -104,14 +110,14 @@ func (r *requestContext) measure() {
 	r.logger.Info("Finished HTTPS check")
 
 	r.logger.Info("Checking time to first byte")
-	client := httputil.NewClientConn(conn, nil)
+	clientCon := httputil.NewClientConn(conn, nil)
 	preWrite := time.Now()
-	client.Write(req)
+	clientCon.Write(req)
 	postWrite := time.Now()
 	res.WriteTime = postWrite.Sub(preWrite)
 	r.logger.Info("Wrote request")
 	// discard the results, this should just read the first chunk from the sock
-	client.Read(req)
+	clientCon.Read(req)
 	res.FirstByte = time.Now().Sub(postWrite)
 	r.logger.Info("Finished checking time to first byte")
 
