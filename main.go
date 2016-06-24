@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/labstack/gommon/log"
 	"github.com/netlify/messaging"
@@ -42,6 +40,7 @@ type timingResults struct {
 	WriteTime     time.Duration `json:"write_request"`
 	ErrorMsg      string        `json:"error_msg"`
 	ErrorCode     string        `json:"error_code"`
+	OriginalURL   string        `json:"original_url"`
 	URL           string        `json:"url"`
 	ContentSize   int           `json:"content_size"`
 	RawIP         string        `json:"raw_ip"`
@@ -70,12 +69,6 @@ type requestContext struct {
 	timeoutSec  int32
 	results     *timingResults
 }
-
-// This is what is needed but it breaks glide: https://github.com/netlify/speedy/issues/4
-var http2Client = &http.Client{
-	Transport: &http2.Transport{},
-}
-var httpClient = &http.Client{}
 
 var requestCounter int32
 var dataCenter string
@@ -182,19 +175,20 @@ func processForever(configFile string) {
 	logger.Info("Starting to consume incoming deliveries forever")
 
 	for d := range deliveries {
-		go processRequest(d.Body, logger)
 		d.Ack(true) // can't do anything if we fail anyways
+
+		msg := new(expectedMessage)
+		if err := json.Unmarshal(d.Body, msg); err != nil {
+			logger.WithError(err).Warn("Failed to unmarshal incoming request")
+			continue
+		}
+
+		go processRequest(msg, logger)
 	}
 	logger.Warn("Exited - probably shouldn't have")
 }
 
-func processRequest(body []byte, logger *logrus.Entry) {
-	msg := new(expectedMessage)
-	if err := json.Unmarshal(body, msg); err != nil {
-		logger.WithError(err).Warn("Failed to unmarshal incoming request")
-		return
-	}
-
+func processRequest(msg *expectedMessage, logger *logrus.Entry) {
 	originalURL := msg.URL
 
 	// now check for the other http
@@ -210,8 +204,8 @@ func processRequest(body []byte, logger *logrus.Entry) {
 	executeTest(&requestContext{
 		url: originalURL,
 		logger: logger.WithFields(logrus.Fields{
-			"url":        originalURL,
-			"request_id": requestID,
+			"original_url": originalURL,
+			"request_id":   requestID,
 		}),
 		callbackURL: msg.CallbackURL,
 		authToken:   msg.AuthToken,
@@ -220,8 +214,8 @@ func processRequest(body []byte, logger *logrus.Entry) {
 	executeTest(&requestContext{
 		url: alternateURL,
 		logger: logger.WithFields(logrus.Fields{
-			"url":        alternateURL,
-			"request_id": requestID,
+			"original_url": alternateURL,
+			"request_id":   requestID,
 		}),
 		callbackURL: msg.CallbackURL,
 		authToken:   msg.AuthToken,

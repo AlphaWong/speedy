@@ -12,40 +12,59 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 )
+
+// This is what is needed but it breaks glide: https://github.com/netlify/speedy/issues/4
+var http2Client = &http.Client{
+	Transport: &http2.Transport{},
+}
+var httpClient = &http.Client{}
 
 func (r *requestContext) measure() {
 	res := new(timingResults)
 	r.results = res
 	res.IsHTTPS = strings.HasPrefix(r.url, "https")
-	res.URL = r.url
+	res.OriginalURL = r.url
 
 	r.logger.Info("Starting Timing")
 
-	req, err := http.NewRequest("GET", r.url, nil)
-	if err != nil {
-		r.logger.WithError(err).Warn("Failed to build request")
-		return
-	}
-
+	//
+	// validate
+	//
 	r.logger.Info("Validating request")
-	err = validateRequest(req)
+	req, err := validateRequest(r.url)
 	if err != nil {
 		r.logger.WithError(err).Warn("Failed to validate request")
 		return
 	}
 	r.logger.Info("Request is valid")
 
-	// now just do a normal request
-	r.logger.Info("Making full GET request")
+	//
+	// redirect?
+	//
+	r.logger.Info("Checking for redirect")
+	req, err = detectRedirect(req)
+	if err != nil {
+		r.logger.WithError(err).Warn("Failed to detect redirect")
+		return
+	}
 
-	preNormal := time.Now()
+	res.URL = req.URL.String()
+
+	r.logger = r.logger.WithField("tested_url", res.URL)
 
 	client := httpClient
 	if req.URL.Scheme == "https" {
 		client = http2Client
 	}
 
+	//
+	// normal request
+	//
+	r.logger.Info("Making full GET request")
+	preNormal := time.Now()
 	res.rsp, err = client.Do(req)
 	if err != nil {
 		errorCode := "failed_initial_request"
@@ -68,6 +87,9 @@ func (r *requestContext) measure() {
 
 	defer res.rsp.Body.Close()
 
+	//
+	// html download time
+	//
 	body, err := ioutil.ReadAll(res.rsp.Body)
 	if err != nil {
 		res.ErrorCode = "failed_to_read_request_body"
@@ -83,6 +105,9 @@ func (r *requestContext) measure() {
 	// now do the partials
 	host, port := canonicalize(req.URL)
 
+	//
+	// DNS timing
+	//
 	r.logger.Info("Resolving DNS")
 	rawip, err := resolve(host, res)
 	if err != nil {
@@ -94,6 +119,9 @@ func (r *requestContext) measure() {
 	res.RawIP = fmt.Sprintf("%s", rawip)
 	r.logger.Infof("DNS successful: %s", rawip)
 
+	//
+	// connect time
+	//
 	directHost := formatURL(rawip, port)
 	r.logger.Infof("Going to dial %s", directHost)
 	conn, err := net.Dial("tcp", directHost)
@@ -105,10 +133,16 @@ func (r *requestContext) measure() {
 	}
 	r.logger.Info("Finished dialing")
 
+	//
+	// SSL checks
+	//
 	r.logger.Info("Checking HTTPS certs")
 	tryHTTPS(&conn, req, res)
 	r.logger.Info("Finished HTTPS check")
 
+	//
+	// time to first byte
+	//
 	r.logger.Info("Checking time to first byte")
 	clientCon := httputil.NewClientConn(conn, nil)
 	preWrite := time.Now()
@@ -173,6 +207,16 @@ func resolve(host string, t *timingResults) (*net.IP, error) {
 	ip := ips[0]
 
 	return &ip, nil
+}
+
+func detectRedirect(req *http.Request) (*http.Request, error) {
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// the final request that was made will be given in the response
+	return resp.Request, nil
 }
 
 func tryHTTPS(conn *net.Conn, req *http.Request, t *timingResults) (tlsConn net.Conn, err error) {
@@ -265,19 +309,24 @@ func checkIfNetlifySite(rsp *http.Response) bool {
 	return false
 }
 
-func validateRequest(req *http.Request) error {
-	if req.URL == nil {
-		return errors.New("http: nil Request.URL")
-	}
-	if req.Header == nil {
-		return errors.New("http: nil Request.Header")
-	}
-	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
-		return errors.New("http: unsupported protocol scheme")
-	}
-	if req.URL.Host == "" {
-		return errors.New("http: no Host in request URL")
+func validateRequest(url string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	if req.URL == nil {
+		return nil, errors.New("http: nil Request.URL")
+	}
+	if req.Header == nil {
+		return nil, errors.New("http: nil Request.Header")
+	}
+	if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+		return nil, errors.New("http: unsupported protocol scheme")
+	}
+	if req.URL.Host == "" {
+		return nil, errors.New("http: no Host in request URL")
+	}
+
+	return req, nil
 }
