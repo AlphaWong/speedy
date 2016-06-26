@@ -193,10 +193,10 @@ func processRequest(msg *expectedMessage, logger *logrus.Entry) {
 
 	// now check for the other http
 	var alternateURL string
-	if strings.HasPrefix(msg.URL, "http") {
-		alternateURL = "https" + msg.URL[4:]
-	} else {
+	if strings.HasPrefix(msg.URL, "https") {
 		alternateURL = "http" + msg.URL[5:]
+	} else {
+		alternateURL = "https" + msg.URL[4:]
 	}
 
 	requestID := rand.Int31()
