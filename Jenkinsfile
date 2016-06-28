@@ -15,7 +15,7 @@ node {
 
   stage "Deploy"
     if (!err) {
-      sh "$RELEASE ${env.WORKSPACE}/src/github.com/netlify/${project}"
+      sh "release.sh ${env.WORKSPACE}/src/github.com/netlify/${project}"
     }
 
   stage "Notify"
