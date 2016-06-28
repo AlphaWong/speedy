@@ -67,6 +67,13 @@ func (r *requestContext) measure() {
 	preNormal := time.Now()
 	res.rsp, err = client.Do(req)
 	if err != nil {
+		if strings.Contains(err.Error(), "could not negotiate protocol mutually") {
+			r.logger.Warn("Failed to negotiate protocol - falling back to http client")
+			res.rsp, err = httpClient.Do(req)
+		}
+	}
+
+	if err != nil {
 		errorCode := "failed_initial_request"
 		if strings.Contains(err.Error(), "x509") {
 			errorCode = "bad_certificates"
@@ -79,6 +86,7 @@ func (r *requestContext) measure() {
 		r.logger.WithError(err).Warn("Failed to make full request")
 		return
 	}
+
 	res.CompleteLoad = time.Now().Sub(preNormal)
 	res.IsNetlifySite = checkIfNetlifySite(res.rsp)
 
