@@ -17,3 +17,10 @@ You can either provide a config file like
 ```
 
 OR use the command line: `go run *.go -cmdline http[s]://netlify.com`
+
+## Features
+Speedy will:
+- try and use the http2 client on any https url
+  -  fallback to the http client if there is an error
+- request both the http and https version of the site
+- follow redirects and only time the final url in the redirect chain
