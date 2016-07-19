@@ -1,14 +1,13 @@
 package: github.com/netlify/speedy
 import:
 - package: github.com/Sirupsen/logrus
-  version: ~0.10.0
-- package: github.com/labstack/gommon
-  version: ~0.0.3
-  subpackages:
-  - log
+  version: v0.10.0
 - package: github.com/netlify/messaging
-  version: ~1.0.2
+  version: v1.0.2
 - package: github.com/spf13/cobra
 - package: golang.org/x/net
   subpackages:
   - http2
+- package: github.com/labstack/gommon
+  subpackages:
+  - log

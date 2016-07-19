@@ -1,0 +1,36 @@
+hash: 65e151d323747e4fdfcdc6c9cba46d706fece0f8aabc6f8cfbbd520781d72ce2
+updated: 2016-07-19T12:52:52.228389473-07:00
+imports:
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/labstack/gommon
+  version: 445cf40e6de4cbef35daf3285ff5212c91e78262
+  subpackages:
+  - log
+- name: github.com/nats-io/nats
+  version: bdc4f3232bda0d36829b72d1cecede976bbe54a5
+  subpackages:
+  - encoders/builtin
+- name: github.com/nats-io/nuid
+  version: a5152d67cf63cbfb5d992a395458722a45194715
+- name: github.com/netlify/messaging
+  version: 2a220448bc1f8bb279b5f54f24fce300c0c608ed
+- name: github.com/Sirupsen/logrus
+  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
+- name: github.com/spf13/cobra
+  version: 9d9ce1213e32036f555185d5a7df854d6f801ef8
+- name: github.com/spf13/pflag
+  version: 1560c1005499d61b80f865c04d39ca7505bf7f0b
+- name: github.com/streadway/amqp
+  version: 2e25825abdbd7752ff08b270d313b93519a0a232
+- name: golang.org/x/net
+  version: 3797cd8864994d713d909eda5e61ede8683fdc12
+  subpackages:
+  - http2
+  - http2/hpack
+  - lex/httplex
+- name: golang.org/x/sys
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  subpackages:
+  - unix
+testImports: []
