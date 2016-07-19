@@ -3,10 +3,26 @@
 set -e
 set -x
 
-WORKSPACE=/go/src/github.com/netlify/$1
+PROJECT=speedy
+WORKSPACE=/go/src/github.com/netlify/$PROJECT
+
+#
+# start dependent containers
+#
+DB_VOLUME=`docker volume create`
+
+#
+# cleanup other containers
+#
+function cleanup {
+	docker volume rm ${DB_VOLUME} || true
+	rm -rf vendor
+}
+trap cleanup EXIT
 
 docker run \
 	--volume $(pwd):$WORKSPACE \
+	--volume $DB_VOLUME:$WORKSPACE/vendor \
 	--workdir $WORKSPACE \
 	--rm \
-	calavera/go-glide:0.10.2 script/test.sh $1
+	calavera/go-glide:0.11.0 script/test.sh $PROJECT
