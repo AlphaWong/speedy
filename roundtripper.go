@@ -55,24 +55,23 @@ func (r *requestContext) measure() {
 
 	r.logger = r.logger.WithField("tested_url", res.URL)
 
-	client := httpClient
+	var rsp *http.Response
+	var dur time.Duration
 	if req.URL.Scheme == "https" {
-		client = http2Client
-	}
-
-	//
-	// normal request
-	//
-	r.logger.Info("Making full GET request")
-	preNormal := time.Now()
-	res.rsp, err = client.Do(req)
-	if err != nil {
-		if strings.Contains(err.Error(), "could not negotiate protocol mutually") {
-			r.logger.Warn("Failed to negotiate protocol - falling back to http client")
-			res.rsp, err = httpClient.Do(req)
+		r.logger.Info("Attempting GET with the http2 client")
+		rsp, dur, err = fullRequest(http2Client, req)
+		if err != nil {
+			r.logger.WithError(err).Info("Failed to make request - going to attempt over http")
+			res.HTTP2Error = err.Error()
 		}
 	}
 
+	if rsp == nil {
+		r.logger.Info("Attempting GET with the http client")
+		rsp, dur, err = fullRequest(httpClient, req)
+	}
+
+	res.CompleteLoad = dur
 	if err != nil {
 		errorCode := "failed_initial_request"
 		if strings.Contains(err.Error(), "x509") {
@@ -83,11 +82,10 @@ func (r *requestContext) measure() {
 
 		res.ErrorCode = errorCode
 		res.ErrorMsg = err.Error()
-		r.logger.WithError(err).Warn("Failed to make full request")
-		return
+		r.logger.WithError(err).Warn("Failed to make full request, with both http2 and http")
 	}
 
-	res.CompleteLoad = time.Now().Sub(preNormal)
+	res.rsp = rsp
 	res.IsNetlifySite = checkIfNetlifySite(res.rsp)
 
 	res.IsHTTP2 = res.rsp.ProtoMajor == 2
@@ -337,4 +335,15 @@ func validateRequest(url string) (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+func fullRequest(client *http.Client, req *http.Request) (*http.Response, time.Duration, error) {
+	preNormal := time.Now()
+	rsp, err := client.Do(req)
+	dur := time.Since(preNormal)
+	if err != nil {
+		return nil, dur, err
+	}
+
+	return rsp, dur, err
 }

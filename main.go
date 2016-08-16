@@ -38,6 +38,7 @@ type timingResults struct {
 	Connect       time.Duration `json:"connect"`
 	TLSHandshake  time.Duration `json:"tls_handshake"`
 	WriteTime     time.Duration `json:"write_request"`
+	HTTP2Error    string        `json:"http2_error"`
 	ErrorMsg      string        `json:"error_msg"`
 	ErrorCode     string        `json:"error_code"`
 	OriginalURL   string        `json:"original_url"`
