@@ -70,7 +70,7 @@ func run(cmd *cobra.Command, _ []string) {
 		}
 
 		metrics.TimeBlock("speedy.request_duration", nil, func() {
-			timing.ProcessRequest(message, log)
+			timing.ProcessRequest(message, config.DataCenter, log)
 		})
 		d.Ack(false)
 	}

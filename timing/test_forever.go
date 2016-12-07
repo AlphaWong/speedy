@@ -53,6 +53,7 @@ type certAlgPair struct {
 // used to contain a single request, makes logging and such nice
 type requestContext struct {
 	ID          string
+	DataCenter  string
 	logger      *logrus.Entry
 	url         string
 	callbackURL string
@@ -61,16 +62,20 @@ type requestContext struct {
 	results     *timingResults
 }
 
-var dataCenter string
-
-func ProcessRequest(msg *messaging.Message, logger *logrus.Entry) {
+func ProcessRequest(msg *messaging.Message, dc string, logger *logrus.Entry) {
 	originalURL := msg.URL
 
 	// now check for the other http
 	var alternateURL string
+	var originalDC string
+	var alternateDC string
 	if strings.HasPrefix(msg.URL, "https") {
 		alternateURL = "http" + msg.URL[5:]
+		originalDC = fmt.Sprintf("%s-http", dc)
+		alternateDC = fmt.Sprintf("%s-https", dc)
 	} else {
+		alternateDC = fmt.Sprintf("%s-http", dc)
+		originalDC = fmt.Sprintf("%s-https", dc)
 		alternateURL = "https" + msg.URL[4:]
 	}
 
@@ -83,13 +88,15 @@ func ProcessRequest(msg *messaging.Message, logger *logrus.Entry) {
 			"original_url": originalURL,
 			"request_id":   requestID,
 		}),
+		DataCenter:  originalDC,
 		callbackURL: msg.CallbackURL,
 		authToken:   msg.AuthToken,
 		timeoutSec:  msg.TimeoutSec,
 	})
 	executeTest(&requestContext{
-		ID:  fmt.Sprintf("alternate-%s", time.Now().Nanosecond()),
-		url: alternateURL,
+		ID:         fmt.Sprintf("alternate-%s", time.Now().Nanosecond()),
+		url:        alternateURL,
+		DataCenter: alternateDC,
 		logger: logger.WithFields(logrus.Fields{
 			"original_url": alternateURL,
 			"request_id":   requestID,
@@ -108,6 +115,7 @@ func executeTest(context *requestContext) {
 
 	done := make(chan bool)
 	go func() {
+		//context.measure()
 		TimeRequest(context)
 		done <- true
 	}()
@@ -124,18 +132,13 @@ func executeTest(context *requestContext) {
 }
 
 func sendResponse(context *requestContext) {
-	dc := fmt.Sprintf("%s-http", dataCenter)
-	if context.results.IsHTTPS {
-		dc = fmt.Sprintf("%s-https", dataCenter)
-	}
 	errlog := context.logger.WithFields(logrus.Fields{
 		"callback_url": context.callbackURL,
-		"data_center":  dc,
 	})
 
 	payload := resultPayload{
 		Status:     false,
-		DataCenter: dc,
+		DataCenter: context.DataCenter,
 	}
 
 	if context.results != nil {
