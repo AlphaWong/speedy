@@ -71,11 +71,11 @@ func ProcessRequest(msg *messaging.Message, dc string, logger *logrus.Entry) {
 	var alternateDC string
 	if strings.HasPrefix(msg.URL, "https") {
 		alternateURL = "http" + msg.URL[5:]
+		originalDC = fmt.Sprintf("%s-https", dc)
+		alternateDC = fmt.Sprintf("%s-http", dc)
+	} else {
 		originalDC = fmt.Sprintf("%s-http", dc)
 		alternateDC = fmt.Sprintf("%s-https", dc)
-	} else {
-		alternateDC = fmt.Sprintf("%s-http", dc)
-		originalDC = fmt.Sprintf("%s-https", dc)
 		alternateURL = "https" + msg.URL[4:]
 	}
 

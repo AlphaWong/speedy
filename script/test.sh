@@ -3,6 +3,11 @@
 set -e
 set -x
 
-glide --home /tmp --no-color install
-go test $(go list ./... | grep -v /vendor/)
-go build -o $1
+OUTPUT="$1"
+
+make deps
+make test
+if [ "$OUTPUT" != "" ]; then
+    make build
+    echo "Finshed building $OUTPUT: $(./$OUTPUT version)"
+fi
