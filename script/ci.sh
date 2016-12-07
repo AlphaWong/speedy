@@ -25,4 +25,4 @@ docker run \
 	--volume $DB_VOLUME:$WORKSPACE/vendor \
 	--workdir $WORKSPACE \
 	--rm \
-	calavera/go-glide:v0.11.0 script/test.sh $PROJECT
+	calavera/go-lide:v0.12.2 script/test.sh $PROJECT
