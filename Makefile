@@ -12,7 +12,7 @@ build_linux: ## Build the binary.
 	GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/netlify/speedy/cmd.Version=`git rev-parse HEAD`" -o doppler_linux_amd64
 
 deps: ## Install dependencies.
-	go get -u github.com/Masterminds/glide && glide install
+	go get -u github.com/Masterminds/glide && glide --home /tmp install
 
 test: ## Run tests.
 	go test -v `go list ./... | grep -v /vendor/`
