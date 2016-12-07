@@ -29,5 +29,5 @@ func runSingle(cmd *cobra.Command, args []string) {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
 
-	timing.ProceœssSingle(args[0])
+	timing.ProcessSingle(args[0])
 }
