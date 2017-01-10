@@ -53,19 +53,21 @@ func TimeRequest(r *requestContext) {
 	//
 	// do a full request to make sure we can
 	//
-	var rsp *http.Response
+	madeAttempt := false
 	if req.URL.Scheme == "https" {
 		r.logger.Info("Attempting GET with the http2 client")
-		rsp, err = fullTracedRequest(http2Client, req, res, r.logger.WithField("client", "http2"))
+		err = fullTracedRequest(http2Client, req, res, r.logger.WithField("client", "http2"))
 		if err != nil {
 			r.logger.WithError(err).Info("Failed to make request - going to attempt over http")
 			res.HTTP2Error = err.Error()
+		} else {
+			madeAttempt = true
 		}
 	}
 
-	if rsp == nil {
+	if !madeAttempt {
 		r.logger.Info("Attempting GET with the http client")
-		rsp, err = fullTracedRequest(httpClient, req, res, r.logger.WithField("client", "http"))
+		err = fullTracedRequest(httpClient, req, res, r.logger.WithField("client", "http"))
 	}
 
 	if err != nil {
@@ -81,30 +83,12 @@ func TimeRequest(r *requestContext) {
 		r.logger.WithError(err).Warn("Failed to make full request, with both http2 and http")
 	}
 
-	res.rsp = rsp
-	res.IsNetlifySite = checkIfNetlifySite(res.rsp)
-	res.IsHTTP2 = res.rsp.ProtoMajor == 2
 	r.logger.Infof("Completed GET request in %s", res.CompleteLoad)
-
-	//
-	// html download time
-	//
-	defer res.rsp.Body.Close()
-	body, err := ioutil.ReadAll(res.rsp.Body)
-	if err != nil {
-		res.ErrorCode = "failed_to_read_request_body"
-		res.ErrorMsg = err.Error()
-		r.logger.WithError(err).Warn("Failed to read request body")
-		return
-	}
-
-	res.ContentSize = len(body)
-	r.logger.Infof("Read request body of size %d", res.ContentSize)
 
 	addTLSInfo(req, res, r.logger)
 }
 
-func fullTracedRequest(client *http.Client, req *http.Request, res *timingResults, log *logrus.Entry) (*http.Response, error) {
+func fullTracedRequest(client *http.Client, req *http.Request, res *timingResults, log *logrus.Entry) error {
 	var dnsStart time.Time
 	var reqStart time.Time
 	var connStart time.Time
@@ -148,8 +132,29 @@ func fullTracedRequest(client *http.Client, req *http.Request, res *timingResult
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
 	reqStart = time.Now()
 	rsp, err := client.Transport.RoundTrip(req)
+	if err != nil {
+		return err
+	}
+
+	// read in the response body
+	defer rsp.Body.Close()
+	body, err := ioutil.ReadAll(rsp.Body)
+	if err != nil {
+		res.ErrorCode = "failed_to_read_request_body"
+		res.ErrorMsg = err.Error()
+		log.WithError(err).Warn("Failed to read request body")
+		return err
+	}
 	res.CompleteLoad = time.Since(reqStart)
-	return rsp, err
+
+	// check for some headers
+	res.IsNetlifySite = checkIfNetlifySite(rsp)
+	res.IsHTTP2 = rsp.ProtoMajor == 2
+
+	res.ContentSize = len(body)
+	log.Infof("Read request body of size %d", res.ContentSize)
+
+	return err
 }
 
 func detectRedirect(req *http.Request) (*http.Request, error) {
