@@ -1,4 +1,4 @@
-package messaging
+package messages
 
 type Message struct {
 	URL         string `json:"url"`

@@ -1,10 +1,10 @@
-hash: 11f637345d888be47bd344e02d0aaa5fb088ff5bf47d0ecf0810f28a4f1bf7c7
-updated: 2016-11-30T14:10:15.344084375-08:00
+hash: 312e8d7febf4bb2ac551a4388f95d885ed08f6d99ee8371d4b4a01ee84e1a59c
+updated: 2017-02-23T15:58:58.56614326-08:00
 imports:
 - name: github.com/fsnotify/fsnotify
-  version: fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197
+  version: a904159b9206978bb6d53fcc7a769e5cd726c737
 - name: github.com/hashicorp/hcl
-  version: b97feebd3db0a834bb92535b0950e7d5d4527a58
+  version: 630949a3c5fa3c613328e1b8256052cbc2327c9b
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -17,9 +17,9 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/magiconair/properties
-  version: 9c47895dc1ce54302908ab8a43385d1f5df2c11c
+  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
 - name: github.com/mitchellh/mapstructure
-  version: f3009df150dadf309fdee4a54ed65c124afad715
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/nats-io/nats
   version: 61923ed1eaf8398000991fbbee2ef11ab5a5be0d
   subpackages:
@@ -27,10 +27,20 @@ imports:
   - util
 - name: github.com/nats-io/nuid
   version: a5152d67cf63cbfb5d992a395458722a45194715
+- name: github.com/netlify/netlify-commons
+  version: 13ec5b77dcf6646155b39ce4d99a502cc6195f22
+  subpackages:
+  - messaging
+  - nconf
+  - tls
 - name: github.com/pelletier/go-buffruneio
   version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
   version: 7cb988051d5045890cb91402a0b5fddc76c627bc
+- name: github.com/rybit/doppler
+  version: 2d47a429d008bd56d22d1bf00a94e67a92378dd0
+  subpackages:
+  - tls
 - name: github.com/rybit/nats_logrus_hook
   version: 1236b915ecdc1963bf90fdfbb05fa815f5033a8c
 - name: github.com/rybit/nats_metrics
@@ -42,15 +52,15 @@ imports:
   subpackages:
   - mem
 - name: github.com/spf13/cast
-  version: 24b6558033ffe202bf42f0f3b870dcc798dd2ba8
+  version: f820543c3592e283e311a60d2a600a664e39f6f7
 - name: github.com/spf13/cobra
   version: 9d9ce1213e32036f555185d5a7df854d6f801ef8
 - name: github.com/spf13/jwalterweatherman
-  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
+  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
 - name: github.com/spf13/pflag
   version: 1560c1005499d61b80f865c04d39ca7505bf7f0b
 - name: github.com/spf13/viper
-  version: 651d9d916abc3c3d6a91a12549495caba5edffd2
+  version: 7538d73b4eb9511d85a9f1dfef202eeb8ac260f4
 - name: github.com/streadway/amqp
   version: 2e25825abdbd7752ff08b270d313b93519a0a232
 - name: golang.org/x/net
@@ -64,10 +74,10 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 5c6cf4f9a2357d38515014cea8c488ed22bdab90
+  version: 4687d739464a2d0af89a25be0318456e0776f3ef
   subpackages:
   - transform
   - unicode/norm
 - name: gopkg.in/yaml.v2
-  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []
