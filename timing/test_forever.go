@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/netlify/speedy/messaging"
+	"github.com/netlify/speedy/messages"
 )
 
 // what we will respond with via AMQP
@@ -62,7 +62,7 @@ type requestContext struct {
 	results     *timingResults
 }
 
-func ProcessRequest(msg *messaging.Message, dc string, logger *logrus.Entry) {
+func ProcessRequest(msg *messages.Message, dc string, logger *logrus.Entry) {
 	originalURL := msg.URL
 
 	// now check for the other http
