@@ -115,7 +115,10 @@ func executeTest(context *requestContext) {
 
 	done := make(chan bool)
 	go func() {
-		//context.measure()
+		// Let sites with caching that just got deployed warm up for more realistic results
+		TimeRequest(context)
+		TimeRequest(context)
+
 		TimeRequest(context)
 		done <- true
 	}()
