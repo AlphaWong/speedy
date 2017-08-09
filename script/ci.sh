@@ -10,4 +10,4 @@ docker run \
 	--volume $(pwd):$WORKSPACE \
 	--workdir $WORKSPACE \
 	--rm \
-	calavera/go-glide:v0.12.2 script/test.sh $PROJECT
+	netlify/go-glide:v0.12.3 script/test.sh $PROJECT
