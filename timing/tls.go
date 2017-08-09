@@ -14,9 +14,9 @@ import (
 func addTLSInfo(req *http.Request, res *timingResults, log *logrus.Entry) {
 	res.IsHTTPS = false
 	if req.URL.Scheme == "https" {
-		ips, err := net.LookupIP(req.URL.Host)
+		ips, err := net.LookupIP(req.URL.Hostname())
 		if err != nil {
-			log.WithError(err).Warnf("Failed to resolve %s to an IP", req.URL.Host)
+			log.WithError(err).Warnf("Failed to resolve %s to an IP", req.URL.Hostname())
 			res.ErrorCode = "failed_tls_ip_lookup"
 			res.ErrorMsg = err.Error()
 			return
