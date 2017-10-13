@@ -2,9 +2,11 @@
   "data_center": "test",
   "rabbit_conf": {
     "servers": ["amqps://rabbit.lo/bitballoon"],
-    "cert_file": "/usr/local/etc/certs/speedy.pem",
-    "key_file": "/usr/local/etc/certs/speedy-key.pem",
-    "ca_files": ["/usr/local/etc/certs/ca.pem"],
+    "tls_conf": {
+      "cert_file": "/usr/local/etc/certs/speedy.pem",
+      "key_file": "/usr/local/etc/certs/speedy-key.pem",
+      "ca_files": ["/usr/local/etc/certs/ca.pem"]
+    },
     "exchange": {
       "name": "speedy",
       "type": "fanout",
@@ -17,15 +19,30 @@
     }
   },
   "nats_conf": {
+    "tls_conf": {
+      "cert_file": "/usr/local/etc/certs/speedy.pem",
+      "key_file": "/usr/local/etc/certs/speedy-key.pem",
+      "ca_files": ["/usr/local/etc/certs/ca.pem"]
+    },
     "servers": ["nats://nats.lo:4222"],
-    "cert_file": "/usr/local/etc/certs/speedy.pem",
-    "key_file": "/usr/local/etc/certs/speedy-key.pem",
-    "ca_files": ["/usr/local/etc/certs/ca.pem"],
-    "log_subject": "logs.test.speedy",
-    "metrics_subject": "metrics.test.speedy"
+    "log_subject": "logs.test.speedy"
   },
   "log_conf": {
     "log_level": "DEBUG",
     "log_file": ""
+  },
+  "metrics_conf": {
+    "namespace": "speedy.",
+    "default_dims": {},
+    "report_sec": 10,
+    "nats": {
+      "tls_conf": {
+        "cert_file": "/usr/local/etc/certs/speedy.pem",
+        "key_file": "/usr/local/etc/certs/speedy-key.pem",
+        "ca_files": ["/usr/local/etc/certs/ca.pem"]
+      },
+      "servers": ["nats://nats.lo:4222"],
+      "subject": "metrics.test.speedy"
+    }
   }
 }

@@ -3,12 +3,12 @@ package cmd
 import (
 	"encoding/json"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/netlify/netlify-commons/messaging"
+	"github.com/netlify/netlify-commons/metrics"
 	"github.com/netlify/netlify-commons/nconf"
-	"github.com/rybit/nats_metrics"
 
 	"github.com/netlify/speedy/conf"
 	"github.com/netlify/speedy/messages"
@@ -46,6 +46,11 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 		"version":     Version,
 	})
 
+	if err := nconf.ConfigureMetrics(config.MetricsConf, log); err != nil {
+		log.WithError(err).Fatal("Failed to configure metrics")
+	}
+	metrics.SetErrorHandler(logError(log))
+
 	return config, log
 }
 
@@ -71,14 +76,20 @@ func run(cmd *cobra.Command, _ []string) {
 		message := new(messages.Message)
 		if err := json.Unmarshal(d.Body, &message); err != nil {
 			log.WithError(err).Warnf("Failed to unmarshal: %s", d.Body)
-			metrics.NewCounter("speedy.failed_parse", nil).Count(nil)
+			metrics.NewCounter("failed_parse", nil).Count(nil)
 			continue
 		}
 
-		metrics.TimeBlock("speedy.request_duration", nil, func() {
+		metrics.TimeBlock("request_duration", nil, func() {
 			timing.ProcessRequest(message, config.DataCenter, log)
 		})
 		d.Ack(false)
 	}
 	log.Info("deliveries channel closed, shutting down")
+}
+
+func logError(log *logrus.Entry) func(*metrics.RawMetric, error) {
+	return func(raw *metrics.RawMetric, err error) {
+		log.WithError(err).WithField("component", "metric_errors").Errorf("Error while processing metric: %+v", *raw)
+	}
 }
