@@ -15,7 +15,7 @@ node {
 
   stage "Deploy"
     if (!err) {
-      sh "release.sh ${project}"
+      sh "script/release.sh ${project}"
     }
 
   stage "Notify"
