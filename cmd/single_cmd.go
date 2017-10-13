@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/netlify/speedy/timing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

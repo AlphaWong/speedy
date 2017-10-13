@@ -1,83 +1,128 @@
-hash: 312e8d7febf4bb2ac551a4388f95d885ed08f6d99ee8371d4b4a01ee84e1a59c
-updated: 2017-02-23T15:58:58.56614326-08:00
+hash: 9493f3da504def0a54cf65b8a1796230dbf4a93dac490c2a9befb17f8659e044
+updated: 2017-10-13T11:21:23.850595-04:00
 imports:
+- name: github.com/bugsnag/bugsnag-go
+  version: 036f1af2a63f8133e596d1c127c86100b4642ba1
+  subpackages:
+  - errors
+- name: github.com/bugsnag/panicwrap
+  version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
 - name: github.com/fsnotify/fsnotify
-  version: a904159b9206978bb6d53fcc7a769e5cd726c737
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+- name: github.com/golang/protobuf
+  version: 130e6b02ab059e7b717a096f397c5b60111cae74
+  subpackages:
+  - proto
 - name: github.com/hashicorp/hcl
-  version: 630949a3c5fa3c613328e1b8256052cbc2327c9b
+  version: 42e33e2d55a0ff1d6263f738896ea8c13571a8d0
   subpackages:
   - hcl/ast
   - hcl/parser
-  - hcl/token
-  - json/parser
   - hcl/scanner
   - hcl/strconv
+  - hcl/token
+  - json/parser
   - json/scanner
   - json/token
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/joho/godotenv
+  version: a79fa1e548e2c689c241d10173efd51e5d689d5b
+- name: github.com/kardianos/osext
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/kelseyhightower/envconfig
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/kr/logfmt
+  version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/magiconair/properties
-  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
+  version: 8d7837e64d3c1ee4e54a880c5a920ab4316fc90a
 - name: github.com/mitchellh/mapstructure
-  version: db1efb556f84b25a0a13a04aad883943538ad2e0
-- name: github.com/nats-io/nats
-  version: 61923ed1eaf8398000991fbbee2ef11ab5a5be0d
+  version: d0303fe809921458f417bcf828397a65db30a7e4
+- name: github.com/nats-io/go-nats
+  version: 4b47946e1082797665a3da33c92860d4553455fe
   subpackages:
   - encoders/builtin
   - util
+- name: github.com/nats-io/nats
+  version: 29f9728a183bf3fa7e809e14edac00b33be72088
 - name: github.com/nats-io/nuid
-  version: a5152d67cf63cbfb5d992a395458722a45194715
+  version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/netlify-commons
-  version: 13ec5b77dcf6646155b39ce4d99a502cc6195f22
+  version: 095fe7c37c1ea82d7b13a3f9150314c6c1532e3d
   subpackages:
+  - discovery
   - messaging
+  - metrics
+  - metrics/transport
   - nconf
   - tls
-- name: github.com/pelletier/go-buffruneio
-  version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
-  version: 7cb988051d5045890cb91402a0b5fddc76c627bc
-- name: github.com/rybit/doppler
-  version: 2d47a429d008bd56d22d1bf00a94e67a92378dd0
-  subpackages:
-  - tls
+  version: 2009e44b6f182e34d8ce081ac2767622937ea3d4
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/rybit/nats_logrus_hook
-  version: 1236b915ecdc1963bf90fdfbb05fa815f5033a8c
-- name: github.com/rybit/nats_metrics
-  version: aec4a70381624a1b673f4abb6efd4349570f1ab9
-- name: github.com/Sirupsen/logrus
-  version: d26492970760ca5d33129d2d799e34be5c4782eb
+  version: 8d9e8da6aeca6fe5ab668efa91d1ea0722af8d1a
+- name: github.com/shopify/logrus-bugsnag
+  version: 6dbc35f2c30d1e37549f9673dd07912452ab28a5
+- name: github.com/signalfx/com_signalfx_metrics_protobuf
+  version: 93e507b42f43f458a109ca278d1542a26a0b87fc
+- name: github.com/signalfx/gohistogram
+  version: 1ccfd2ff508314074672f4450a917011a2060408
+- name: github.com/signalfx/golib
+  version: cb7680940d605b817db79790c241eed2a00fa6e6
+  subpackages:
+  - datapoint
+  - errors
+  - event
+  - eventcounter
+  - log
+  - sfxclient
+  - timekeeper
+- name: github.com/sirupsen/logrus
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/afero
-  version: 06b7e5f50606ecd49148a01a6008942d9b669217
+  version: e67d870304c4bca21331b02f414f970df13aa694
   subpackages:
   - mem
 - name: github.com/spf13/cast
-  version: f820543c3592e283e311a60d2a600a664e39f6f7
+  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: 9d9ce1213e32036f555185d5a7df854d6f801ef8
+  version: 40f18800b20df8f74ad2b02aa4e56748a3d17239
 - name: github.com/spf13/jwalterweatherman
-  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
+  version: 12bd96e66386c1960ab0f74ced1362f66f552f7b
 - name: github.com/spf13/pflag
-  version: 1560c1005499d61b80f865c04d39ca7505bf7f0b
+  version: a9789e855c7696159b7db0db7f440b449edf2b31
 - name: github.com/spf13/viper
-  version: 7538d73b4eb9511d85a9f1dfef202eeb8ac260f4
+  version: 25b30aa063fc18e48662b86996252eabdcf2f0c7
 - name: github.com/streadway/amqp
-  version: 2e25825abdbd7752ff08b270d313b93519a0a232
-- name: golang.org/x/net
-  version: 3797cd8864994d713d909eda5e61ede8683fdc12
+  version: 7db842394ca79f338f781d47bc59115f44adb20b
+- name: golang.org/x/crypto
+  version: 81372b2fc2f10bef2a7f338da115c315a56b2726
   subpackages:
+  - ssh/terminal
+- name: golang.org/x/net
+  version: a04bdaca5b32abe1c069418fb7088ae607de5bd0
+  subpackages:
+  - context
   - http2
   - http2/hpack
+  - idna
   - lex/httplex
 - name: golang.org/x/sys
-  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  version: f7928cfef4d09d1b080aa2b6fd3ca9ba1567c733
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 4687d739464a2d0af89a25be0318456e0776f3ef
+  version: 825fc78a2fd6fa0a5447e300189e3219e05e1f25
   subpackages:
+  - secure/bidirule
   - transform
+  - unicode/bidi
   - unicode/norm
+- name: gopkg.in/logfmt.v0
+  version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
+- name: gopkg.in/stack.v1
+  version: 817915b46b97fd7bb80e8ab6b69f01a53ac3eebf
 - name: gopkg.in/yaml.v2
-  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports: []

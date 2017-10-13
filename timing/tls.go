@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func addTLSInfo(req *http.Request, res *timingResults, log *logrus.Entry) {

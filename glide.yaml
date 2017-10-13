@@ -1,13 +1,11 @@
 package: github.com/netlify/speedy
 import:
-- package: github.com/Sirupsen/logrus
-  version: v0.11.0
+- package: github.com/sirupsen/logrus
+  version: 1.0.3
 - package: github.com/nats-io/nats
-  version: v1.2.2
+  version: v1.3.0
 - package: github.com/rybit/nats_logrus_hook
-  version: v1.0.2
-- package: github.com/rybit/nats_metrics
-  version: v1.1.1
+  version: v1.0.4
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: github.com/streadway/amqp
@@ -15,4 +13,4 @@ import:
   subpackages:
   - http2
 - package: github.com/netlify/netlify-commons
-  version: v0.0.1
+  version: v0.6.5
