@@ -61,9 +61,28 @@ func run(cmd *cobra.Command, _ []string) {
 		log.WithError(err).Fatal("Failed to connect to nats")
 	}
 
-	consumer, err := messaging.ConnectToRabbit(&config.RabbitConf, log.WithField("stage", "connecting_rabbit"))
+	qc := config.RabbitConf
+	if err := messaging.ValidateRabbitConfigStruct(qc.Servers, qc.ExchangeDefinition, qc.QueueDefinition); err != nil {
+		log.WithError(err).Fatal("Failed to configure rabbitmq")
+	}
+
+	rbConn, err := messaging.DialToRabbit(qc.Servers, qc.TLS, log)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to connect to rabbits")
+		log.WithError(err).Fatal("Failed to connect to rabbitmq")
+	}
+	defer rbConn.Close()
+
+	ch, err := messaging.CreateChannel(rbConn, qc.ExchangeDefinition, qc.QueueDefinition, log)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create rabbitmq channel")
+	}
+	if err = ch.Qos(1, 0, false); err != nil {
+		log.WithError(err).Fatal("Failed to set QoS on rabbitmq channel")
+	}
+
+	consumer, err := messaging.CreateConsumerOnChannel(rbConn, ch, qc.QueueDefinition, qc.DeliveryDefinition, log)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create rabbitmq consumer")
 	}
 
 	log.WithFields(logrus.Fields{
