@@ -1,5 +1,5 @@
-hash: 9493f3da504def0a54cf65b8a1796230dbf4a93dac490c2a9befb17f8659e044
-updated: 2017-10-13T11:21:23.850595-04:00
+hash: f084da621a903fdf4b9068e7e5611b9c29dc49099e9d32519293c53503581271
+updated: 2018-04-09T18:57:02.556622-04:00
 imports:
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
@@ -9,6 +9,12 @@ imports:
   version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+- name: github.com/gogo/protobuf
+  version: 616a82ed12d78d24d4839363e8f3c5d3f20627cf
+  subpackages:
+  - gogoproto
+  - proto
+  - protoc-gen-gogo/descriptor
 - name: github.com/golang/protobuf
   version: 130e6b02ab059e7b717a096f397c5b60111cae74
   subpackages:
@@ -18,6 +24,7 @@ imports:
   subpackages:
   - hcl/ast
   - hcl/parser
+  - hcl/printer
   - hcl/scanner
   - hcl/strconv
   - hcl/token
@@ -39,16 +46,20 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/nats-io/go-nats
-  version: 4b47946e1082797665a3da33c92860d4553455fe
+  version: 29f9728a183bf3fa7e809e14edac00b33be72088
   subpackages:
   - encoders/builtin
   - util
+- name: github.com/nats-io/go-nats-streaming
+  version: 6e620057a207bd61e992c1c5b6a2de7b6a4cb010
+  subpackages:
+  - pb
 - name: github.com/nats-io/nats
   version: 29f9728a183bf3fa7e809e14edac00b33be72088
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/netlify-commons
-  version: 095fe7c37c1ea82d7b13a3f9150314c6c1532e3d
+  version: 7b0803d976c09743e8e1eeb3cd11bd5fc527a7d1
   subpackages:
   - discovery
   - messaging
@@ -60,8 +71,6 @@ imports:
   version: 2009e44b6f182e34d8ce081ac2767622937ea3d4
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
-- name: github.com/rybit/nats_logrus_hook
-  version: 8d9e8da6aeca6fe5ab668efa91d1ea0722af8d1a
 - name: github.com/shopify/logrus-bugsnag
   version: 6dbc35f2c30d1e37549f9673dd07912452ab28a5
 - name: github.com/signalfx/com_signalfx_metrics_protobuf
@@ -87,13 +96,13 @@ imports:
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: 40f18800b20df8f74ad2b02aa4e56748a3d17239
+  version: 7b2c5ac9fc04fc5efafb60700713d4fa609b777b
 - name: github.com/spf13/jwalterweatherman
   version: 12bd96e66386c1960ab0f74ced1362f66f552f7b
 - name: github.com/spf13/pflag
-  version: a9789e855c7696159b7db0db7f440b449edf2b31
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/spf13/viper
-  version: 25b30aa063fc18e48662b86996252eabdcf2f0c7
+  version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
 - name: github.com/streadway/amqp
   version: 7db842394ca79f338f781d47bc59115f44adb20b
 - name: golang.org/x/crypto

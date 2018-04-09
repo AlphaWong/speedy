@@ -12,7 +12,6 @@ import (
 	"golang.org/x/net/http2"
 )
 
-// This is what is needed but it breaks glide: https://github.com/netlify/speedy/issues/4
 var http2Client = &http.Client{
 	Transport: &http2.Transport{},
 }
