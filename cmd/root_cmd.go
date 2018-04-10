@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -66,6 +67,10 @@ func run(cmd *cobra.Command, _ []string) {
 	go doTimings(work, config.DataCenter, log)
 
 	if config.NatsConf != nil {
+		// ensure each worker has a different client id
+		if inst := os.Getenv("SPEEDY_WORKER_INSTANCE"); inst != "" {
+			config.NatsConf.ClientID = fmt.Sprintf("%s-%s", config.NatsConf.ClientID, inst)
+		}
 		nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to connect to nats")
@@ -96,13 +101,13 @@ func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, 
 
 	log = log.WithFields(logrus.Fields{
 		"subject":      conf.Subject,
-		"durable_name": conf.ClientID,
+		"durable_name": conf.DurableName,
 		"group":        conf.Group,
 	})
 	log.Info("Preparing durable subscription")
 
 	opts := []stan.SubscriptionOption{
-		stan.DurableName(conf.ClientID),
+		stan.DurableName(conf.DurableName),
 	}
 
 	cb := func(msg *stan.Msg) {

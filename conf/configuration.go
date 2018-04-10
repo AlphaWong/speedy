@@ -17,4 +17,5 @@ type NatsConfig struct {
 	messaging.NatsConfig `mapstructure:",squash"`
 	Subject              string `mapstructure:"command_subject"`
 	Group                string `mapstructure:"command_group"`
+	DurableName          string `mapstructure:"durable_name"`
 }
