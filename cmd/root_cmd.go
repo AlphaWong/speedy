@@ -68,7 +68,7 @@ func run(cmd *cobra.Command, _ []string) {
 
 	if config.NatsConf != nil {
 		// ensure each worker has a different client id
-		if inst := os.Getenv("SPEEDY_WORKER_INSTANCE"); inst != "" {
+		if inst := os.Getenv("INSTANCE"); inst != "" {
 			config.NatsConf.ClientID = fmt.Sprintf("%s-%s", config.NatsConf.ClientID, inst)
 		}
 		nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
