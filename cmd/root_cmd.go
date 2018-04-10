@@ -77,6 +77,10 @@ func run(cmd *cobra.Command, _ []string) {
 		go consumeFromRabbit(config.RabbitConf, work, shutdown, log.WithField("consumer", "rabbitmq"))
 	}
 
+	if config.NatsConf == nil && config.RabbitConf == nil {
+		log.Fatal("No consumers configured")
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-c
