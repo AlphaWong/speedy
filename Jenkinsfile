@@ -1,36 +1,38 @@
-node {
-  def err = null
-  def project = "speedy"
+pipeline {
+  agent any
 
-  stage "Checkout code"
-    checkout scm
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+    timestamps()
+  }
 
-  stage "Run CI script"
-    try {
-      sh "script/ci.sh ${project}"
-    } catch (Exception e) {
-      currentBuild.result = "FAILURE"
-      err = e
+  stages {
+    stage("Run CI script") {
+      agent {
+        dockerfile {
+          filename "Dockerfile.test"
+          reuseNode true
+        }
+      }
+      steps {
+        sh "ln -s '${env.WORKSPACE}' /go/src/github.com/netlify/speedy"
+        sh "cd /go/src/github.com/netlify/speedy && script/test.sh speedy"
+      }
     }
 
-  stage "Deploy"
-    if (!err) {
-      sh "script/release.sh ${project}"
+    stage("Deploy") {
+      steps {
+        sh "script/release.sh speedy"
+      }
     }
+  }
 
-  stage "Notify"
-    def message = "succeeded"
-    def color = "good"
-
-    if (currentBuild.result == "FAILURE") {
-      message = "failed"
-      color = "danger"
+  post {
+    failure {
+      slackSend color: "danger", message: "Build failed - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}/console|Open>)"
     }
-    slackSend message: "Build ${message} - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}/console|Open>)", color: color
-
-  if (err) {
-    // throw error again to propagate build failure.
-    // Otherwise Jenkins thinks that the pipeline completed successfully.
-    throw err
+    success {
+      slackSend color: "good", message: "Build succeeded - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}/console|Open>)"
+    }
   }
 }

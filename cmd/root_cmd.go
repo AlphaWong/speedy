@@ -2,7 +2,12 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -56,12 +61,80 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 
 func run(cmd *cobra.Command, _ []string) {
 	config, log := start(cmd)
+	work := make(chan []byte)
+	shutdown := make(chan struct{})
 
-	if _, err := messaging.ConfigureNatsConnection(config.NatsConf, log); err != nil {
-		log.WithError(err).Fatal("Failed to connect to nats")
+	go doTimings(work, config.DataCenter, log)
+
+	if config.NatsConf != nil {
+		// ensure each worker has a different client id
+		if inst := os.Getenv("INSTANCE"); inst != "" {
+			config.NatsConf.ClientID = fmt.Sprintf("%s-%s", config.NatsConf.ClientID, inst)
+		}
+		nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to connect to nats")
+		}
+		go consumeFromNats(nc, config.NatsConf, work, shutdown, log.WithField("consumer", "nats"))
 	}
 
-	qc := config.RabbitConf
+	if config.RabbitConf != nil {
+		go consumeFromRabbit(config.RabbitConf, work, shutdown, log.WithField("consumer", "rabbitmq"))
+	}
+
+	if config.NatsConf == nil && config.RabbitConf == nil {
+		log.Fatal("No consumers configured")
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	<-c
+
+	close(shutdown)
+	close(work)
+}
+
+func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, shutdown chan struct{}, log *logrus.Entry) {
+	if conn == nil {
+		return
+	}
+
+	log = log.WithFields(logrus.Fields{
+		"subject":      conf.Subject,
+		"durable_name": conf.DurableName,
+		"group":        conf.Group,
+	})
+	log.Info("Preparing durable subscription")
+
+	opts := []stan.SubscriptionOption{
+		stan.DurableName(conf.DurableName),
+	}
+
+	cb := func(msg *stan.Msg) {
+		work <- msg.Data
+	}
+
+	var serr error
+	var sub stan.Subscription
+	if conf.Group != "" {
+		sub, serr = conn.QueueSubscribe(conf.Subject, conf.Group, cb, opts...)
+	} else {
+		sub, serr = conn.Subscribe(conf.Subject, cb, opts...)
+	}
+
+	if serr != nil {
+		log.WithError(serr).Fatal("Failed to subscribe")
+		return
+	}
+	log.Info("Subscribed successfully")
+
+	defer sub.Close()
+	log.Info("Waiting for incoming messages")
+	<-shutdown
+	log.Info("Shutdown consumer")
+}
+
+func consumeFromRabbit(qc *messaging.RabbitConfig, work chan<- []byte, shutdown chan struct{}, log *logrus.Entry) {
 	if err := messaging.ValidateRabbitConfigStruct(qc.Servers, qc.ExchangeDefinition, qc.QueueDefinition); err != nil {
 		log.WithError(err).Fatal("Failed to configure rabbitmq")
 	}
@@ -86,25 +159,40 @@ func run(cmd *cobra.Command, _ []string) {
 	}
 
 	log.WithFields(logrus.Fields{
-		"exchange":    config.RabbitConf.ExchangeDefinition.Name,
-		"type":        config.RabbitConf.ExchangeDefinition.Type,
-		"queue":       config.RabbitConf.QueueDefinition.Name,
-		"binding_key": config.RabbitConf.QueueDefinition.BindingKey,
+		"exchange":    qc.ExchangeDefinition.Name,
+		"type":        qc.ExchangeDefinition.Type,
+		"queue":       qc.QueueDefinition.Name,
+		"binding_key": qc.QueueDefinition.BindingKey,
 	}).Info("Starting to consume from channel")
-	for d := range consumer.Deliveries {
+	for {
+		select {
+		case d, ok := <-consumer.Deliveries:
+			if !ok {
+				log.Info("deliveries channel closed, shutting down")
+				syscall.Kill(os.Getpid(), syscall.SIGTERM)
+				return
+			}
+			work <- d.Body
+			d.Ack(false)
+		case <-shutdown:
+			return
+		}
+	}
+}
+
+func doTimings(work <-chan []byte, dc string, log *logrus.Entry) {
+	for d := range work {
 		message := new(messages.Message)
-		if err := json.Unmarshal(d.Body, &message); err != nil {
-			log.WithError(err).Warnf("Failed to unmarshal: %s", d.Body)
+		if err := json.Unmarshal(d, &message); err != nil {
+			log.WithError(err).Warnf("Failed to unmarshal: %s", d)
 			metrics.NewCounter("failed_parse", nil).Count(nil)
 			continue
 		}
 
 		metrics.TimeBlock("request_duration", nil, func() {
-			timing.ProcessRequest(message, config.DataCenter, log)
+			timing.ProcessRequest(message, dc, log)
 		})
-		d.Ack(false)
 	}
-	log.Info("deliveries channel closed, shutting down")
 }
 
 func logError(log *logrus.Entry) func(*metrics.RawMetric, error) {
