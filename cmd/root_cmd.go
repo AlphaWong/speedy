@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
@@ -60,13 +63,24 @@ func run(cmd *cobra.Command, _ []string) {
 	work := make(chan []byte)
 	shutdown := make(chan struct{})
 
-	nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to connect to nats")
-	}
 	go doTimings(work, config.DataCenter, log)
-	go consumeFromNats(nc, config.NatsConf, work, shutdown, log.WithField("consumer", "nats"))
-	consumeFromRabbit(config, work, log.WithField("consumer", "rabbitmq"))
+
+	if config.NatsConf != nil {
+		nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to connect to nats")
+		}
+		go consumeFromNats(nc, config.NatsConf, work, shutdown, log.WithField("consumer", "nats"))
+	}
+
+	if config.RabbitConf != nil {
+		go consumeFromRabbit(config.RabbitConf, work, shutdown, log.WithField("consumer", "rabbitmq"))
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	<-c
+
 	close(shutdown)
 	close(work)
 }
@@ -100,7 +114,7 @@ func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, 
 	}
 
 	if serr != nil {
-		log.WithError(serr).Warn("Failed to subscribe")
+		log.WithError(serr).Fatal("Failed to subscribe")
 		return
 	}
 	log.Info("Subscribed successfully")
@@ -111,8 +125,7 @@ func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, 
 	log.Info("Shutdown consumer")
 }
 
-func consumeFromRabbit(config *conf.Config, work chan<- []byte, log *logrus.Entry) {
-	qc := config.RabbitConf
+func consumeFromRabbit(qc *messaging.RabbitConfig, work chan<- []byte, shutdown chan struct{}, log *logrus.Entry) {
 	if err := messaging.ValidateRabbitConfigStruct(qc.Servers, qc.ExchangeDefinition, qc.QueueDefinition); err != nil {
 		log.WithError(err).Fatal("Failed to configure rabbitmq")
 	}
@@ -142,11 +155,20 @@ func consumeFromRabbit(config *conf.Config, work chan<- []byte, log *logrus.Entr
 		"queue":       qc.QueueDefinition.Name,
 		"binding_key": qc.QueueDefinition.BindingKey,
 	}).Info("Starting to consume from channel")
-	for d := range consumer.Deliveries {
-		work <- d.Body
-		d.Ack(false)
+	for {
+		select {
+		case d, ok := <-consumer.Deliveries:
+			if !ok {
+				log.Info("deliveries channel closed, shutting down")
+				syscall.Kill(os.Getpid(), syscall.SIGTERM)
+				return
+			}
+			work <- d.Body
+			d.Ack(false)
+		case <-shutdown:
+			return
+		}
 	}
-	log.Info("deliveries channel closed, shutting down")
 }
 
 func doTimings(work <-chan []byte, dc string, log *logrus.Entry) {

@@ -6,11 +6,11 @@ import (
 )
 
 type Config struct {
-	LogConf     nconf.LoggingConfig    `mapstructure:"log_conf"`
-	NatsConf    *NatsConfig            `mapstructure:"nats_conf"`
-	RabbitConf  messaging.RabbitConfig `mapstructure:"rabbit_conf"`
-	MetricsConf *nconf.MetricsConfig   `mapstructure:"metrics_conf"`
-	DataCenter  string                 `mapstructure:"data_center"`
+	LogConf     nconf.LoggingConfig     `mapstructure:"log_conf"`
+	NatsConf    *NatsConfig             `mapstructure:"nats_conf"`
+	RabbitConf  *messaging.RabbitConfig `mapstructure:"rabbit_conf"`
+	MetricsConf *nconf.MetricsConfig    `mapstructure:"metrics_conf"`
+	DataCenter  string                  `mapstructure:"data_center"`
 }
 
 type NatsConfig struct {
