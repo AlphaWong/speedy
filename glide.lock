@@ -1,5 +1,5 @@
-hash: 06bb0254234d072a8accbcddd804e7025802e976000d1345cfaf5cd617b13052
-updated: 2018-04-23T16:19:47.230026-04:00
+hash: f084da621a903fdf4b9068e7e5611b9c29dc49099e9d32519293c53503581271
+updated: 2018-04-23T16:40:58.400797-04:00
 imports:
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
@@ -108,8 +108,6 @@ imports:
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/spf13/viper
   version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
-- name: github.com/stackimpact/stackimpact-go
-  version: c2dae180f31cf1620f73129a80fa8057859a8510
 - name: github.com/streadway/amqp
   version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: golang.org/x/crypto

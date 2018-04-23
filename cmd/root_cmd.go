@@ -10,7 +10,6 @@ import (
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	stackimpact "github.com/stackimpact/stackimpact-go"
 
 	"github.com/netlify/netlify-commons/messaging"
 	"github.com/netlify/netlify-commons/metrics"
@@ -19,6 +18,9 @@ import (
 	"github.com/netlify/speedy/conf"
 	"github.com/netlify/speedy/messages"
 	"github.com/netlify/speedy/timing"
+
+	"net/http"
+	_ "net/http/pprof"
 )
 
 var rootCmd = &cobra.Command{
@@ -57,16 +59,14 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 	}
 	metrics.SetErrorHandler(logError(log))
 
+	go func() {
+		log.Info(http.ListenAndServe(":6060", nil))
+	}()
+
 	return config, log
 }
 
 func run(cmd *cobra.Command, _ []string) {
-	_ = stackimpact.Start(stackimpact.Options{
-		AgentKey:   "3899d01ce61098c555c69b8a730dba9e3be8143b",
-		AppName:    "speedy",
-		AppVersion: Version,
-	})
-
 	config, log := start(cmd)
 	work := make(chan []byte)
 	shutdown := make(chan struct{})
