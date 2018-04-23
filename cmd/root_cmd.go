@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,6 +39,9 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 	if err := nconf.LoadConfig(cmd, "speedy", config); err != nil {
 		logrus.WithError(err).Fatalf("Failed to load configuation: %v", err)
 	}
+	if config.NumWorkers < 1 {
+		config.NumWorkers = 1
+	}
 
 	log, err := nconf.ConfigureLogging(&config.LogConf)
 	if err != nil {
@@ -64,13 +66,11 @@ func run(cmd *cobra.Command, _ []string) {
 	work := make(chan []byte)
 	shutdown := make(chan struct{})
 
-	go doTimings(work, config.DataCenter, log)
+	for i := 1; i <= config.NumWorkers; i++ {
+		go doTimings(work, config.DataCenter, log.WithField("worker", string(i)))
+	}
 
 	if config.NatsConf != nil {
-		// ensure each worker has a different client id
-		if inst := os.Getenv("INSTANCE"); inst != "" {
-			config.NatsConf.ClientID = fmt.Sprintf("%s-%s", config.NatsConf.ClientID, inst)
-		}
 		nc, err := messaging.ConfigureNatsStreaming(&config.NatsConf.NatsConfig, log)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to connect to nats")

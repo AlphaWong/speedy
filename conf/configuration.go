@@ -10,6 +10,7 @@ type Config struct {
 	NatsConf    *NatsConfig          `mapstructure:"nats_conf"`
 	MetricsConf *nconf.MetricsConfig `mapstructure:"metrics_conf"`
 	DataCenter  string               `mapstructure:"data_center"`
+	NumWorkers  int                  `mapstructure:"num_workers"`
 }
 
 type NatsConfig struct {

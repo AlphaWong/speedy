@@ -82,7 +82,7 @@ func ProcessRequest(msg *messages.Message, dc string, logger *logrus.Entry) {
 	requestID := rand.Int31()
 
 	executeTest(&requestContext{
-		ID:  fmt.Sprintf("original-%s", time.Now().Nanosecond()),
+		ID:  fmt.Sprintf("original-%d", time.Now().Nanosecond()),
 		url: originalURL,
 		logger: logger.WithFields(logrus.Fields{
 			"original_url": originalURL,
@@ -94,7 +94,7 @@ func ProcessRequest(msg *messages.Message, dc string, logger *logrus.Entry) {
 		timeoutSec:  msg.TimeoutSec,
 	})
 	executeTest(&requestContext{
-		ID:         fmt.Sprintf("alternate-%s", time.Now().Nanosecond()),
+		ID:         fmt.Sprintf("alternate-%d", time.Now().Nanosecond()),
 		url:        alternateURL,
 		DataCenter: alternateDC,
 		logger: logger.WithFields(logrus.Fields{
