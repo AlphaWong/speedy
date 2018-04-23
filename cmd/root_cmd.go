@@ -67,7 +67,7 @@ func run(cmd *cobra.Command, _ []string) {
 	shutdown := make(chan struct{})
 
 	for i := 1; i <= config.NumWorkers; i++ {
-		go doTimings(work, config.DataCenter, log.WithField("worker", string(i)))
+		go doTimings(work, config.DataCenter, log.WithField("worker", i))
 	}
 
 	if config.NatsConf != nil {
