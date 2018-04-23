@@ -1,23 +1,5 @@
 {
   "data_center": "test",
-  "rabbit_conf": {
-    "servers": ["amqps://rabbit.lo/bitballoon"],
-    "tls_conf": {
-      "cert_file": "/usr/local/etc/certs/speedy.pem",
-      "key_file": "/usr/local/etc/certs/speedy-key.pem",
-      "ca_files": ["/usr/local/etc/certs/ca.pem"]
-    },
-    "exchange": {
-      "name": "speedy",
-      "type": "fanout",
-      "durable": true,
-      "auto_delete": true
-    },
-    "queue": {
-      "name": "speedy-local",
-      "binding_key": ""
-    }
-  },
   "nats_conf": {
     "tls_conf": {
       "cert_file": "/usr/local/etc/certs/speedy.pem",

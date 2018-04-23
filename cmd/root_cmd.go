@@ -78,11 +78,7 @@ func run(cmd *cobra.Command, _ []string) {
 		go consumeFromNats(nc, config.NatsConf, work, shutdown, log.WithField("consumer", "nats"))
 	}
 
-	if config.RabbitConf != nil {
-		go consumeFromRabbit(config.RabbitConf, work, shutdown, log.WithField("consumer", "rabbitmq"))
-	}
-
-	if config.NatsConf == nil && config.RabbitConf == nil {
+	if config.NatsConf == nil {
 		log.Fatal("No consumers configured")
 	}
 
@@ -132,52 +128,6 @@ func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, 
 	log.Info("Waiting for incoming messages")
 	<-shutdown
 	log.Info("Shutdown consumer")
-}
-
-func consumeFromRabbit(qc *messaging.RabbitConfig, work chan<- []byte, shutdown chan struct{}, log *logrus.Entry) {
-	if err := messaging.ValidateRabbitConfigStruct(qc.Servers, qc.ExchangeDefinition, qc.QueueDefinition); err != nil {
-		log.WithError(err).Fatal("Failed to configure rabbitmq")
-	}
-
-	rbConn, err := messaging.DialToRabbit(qc.Servers, qc.TLS, log)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to connect to rabbitmq")
-	}
-	defer rbConn.Close()
-
-	ch, err := messaging.CreateChannel(rbConn, qc.ExchangeDefinition, qc.QueueDefinition, log)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create rabbitmq channel")
-	}
-	if err = ch.Qos(1, 0, false); err != nil {
-		log.WithError(err).Fatal("Failed to set QoS on rabbitmq channel")
-	}
-
-	consumer, err := messaging.CreateConsumerOnChannel(rbConn, ch, qc.QueueDefinition, qc.DeliveryDefinition, log)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create rabbitmq consumer")
-	}
-
-	log.WithFields(logrus.Fields{
-		"exchange":    qc.ExchangeDefinition.Name,
-		"type":        qc.ExchangeDefinition.Type,
-		"queue":       qc.QueueDefinition.Name,
-		"binding_key": qc.QueueDefinition.BindingKey,
-	}).Info("Starting to consume from channel")
-	for {
-		select {
-		case d, ok := <-consumer.Deliveries:
-			if !ok {
-				log.Info("deliveries channel closed, shutting down")
-				syscall.Kill(os.Getpid(), syscall.SIGTERM)
-				return
-			}
-			work <- d.Body
-			d.Ack(false)
-		case <-shutdown:
-			return
-		}
-	}
 }
 
 func doTimings(work <-chan []byte, dc string, log *logrus.Entry) {

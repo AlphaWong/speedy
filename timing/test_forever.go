@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/netlify/speedy/messages"
+	"github.com/sirupsen/logrus"
 )
 
-// what we will respond with via AMQP
+// what we will respond with
 type resultPayload struct {
 	Status     bool          `json:"status"`
 	DataCenter string        `json:"data_center"`
