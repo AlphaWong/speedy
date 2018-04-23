@@ -1,5 +1,5 @@
-hash: f084da621a903fdf4b9068e7e5611b9c29dc49099e9d32519293c53503581271
-updated: 2018-04-09T18:57:02.556622-04:00
+hash: cfe15c0e1bf5c95bc16098ec2817172bfe36d6cf6fd653cf0aba89c24811856a
+updated: 2018-04-23T17:30:36.503138-04:00
 imports:
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
@@ -8,7 +8,7 @@ imports:
 - name: github.com/bugsnag/panicwrap
   version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
 - name: github.com/fsnotify/fsnotify
-  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+  version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/gogo/protobuf
   version: 616a82ed12d78d24d4839363e8f3c5d3f20627cf
   subpackages:
@@ -16,11 +16,11 @@ imports:
   - proto
   - protoc-gen-gogo/descriptor
 - name: github.com/golang/protobuf
-  version: 130e6b02ab059e7b717a096f397c5b60111cae74
+  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
 - name: github.com/hashicorp/hcl
-  version: 42e33e2d55a0ff1d6263f738896ea8c13571a8d0
+  version: 99df0eb941dd8ddbc83d3f3605a34f6a686ac85e
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -39,12 +39,14 @@ imports:
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/kr/fs
+  version: 2788f0dbd16903de03cb8186e5c7d97b69ad387b
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/magiconair/properties
-  version: 8d7837e64d3c1ee4e54a880c5a920ab4316fc90a
+  version: 0723e352fa358f9322c938cc2dadda874e9151a9
 - name: github.com/mitchellh/mapstructure
-  version: d0303fe809921458f417bcf828397a65db30a7e4
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/nats-io/go-nats
   version: 29f9728a183bf3fa7e809e14edac00b33be72088
   subpackages:
@@ -68,9 +70,11 @@ imports:
   - nconf
   - tls
 - name: github.com/pelletier/go-toml
-  version: 2009e44b6f182e34d8ce081ac2767622937ea3d4
+  version: acdc4509485b587f5e675510c4f2c63e90ff68a8
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/pkg/sftp
+  version: 8197a2e580736b78d704be0fc47b2324c0591a32
 - name: github.com/shopify/logrus-bugsnag
   version: 6dbc35f2c30d1e37549f9673dd07912452ab28a5
 - name: github.com/signalfx/com_signalfx_metrics_protobuf
@@ -90,27 +94,32 @@ imports:
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/afero
-  version: e67d870304c4bca21331b02f414f970df13aa694
+  version: 20500e2abd0d1f4564a499e83d11d6c73cd58c27
   subpackages:
   - mem
+  - sftp
 - name: github.com/spf13/cast
-  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
+  version: e31f36ffc91a2ba9ddb72a4b6a607ff9b3d3cb63
 - name: github.com/spf13/cobra
   version: 7b2c5ac9fc04fc5efafb60700713d4fa609b777b
 - name: github.com/spf13/jwalterweatherman
-  version: 12bd96e66386c1960ab0f74ced1362f66f552f7b
+  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
 - name: github.com/spf13/pflag
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/spf13/viper
   version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
 - name: github.com/streadway/amqp
-  version: 7db842394ca79f338f781d47bc59115f44adb20b
+  version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: golang.org/x/crypto
-  version: 81372b2fc2f10bef2a7f338da115c315a56b2726
+  version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
+  - curve25519
+  - ed25519
+  - ed25519/internal/edwards25519
+  - ssh
   - ssh/terminal
 - name: golang.org/x/net
-  version: a04bdaca5b32abe1c069418fb7088ae607de5bd0
+  version: d379faa25cbdc04d653984913a2ceb43b0bc46d7
   subpackages:
   - context
   - http2
@@ -122,16 +131,14 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 825fc78a2fd6fa0a5447e300189e3219e05e1f25
+  version: f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd
   subpackages:
-  - secure/bidirule
   - transform
-  - unicode/bidi
   - unicode/norm
 - name: gopkg.in/logfmt.v0
   version: 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 - name: gopkg.in/stack.v1
   version: 817915b46b97fd7bb80e8ab6b69f01a53ac3eebf
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []

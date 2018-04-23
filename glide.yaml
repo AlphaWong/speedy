@@ -6,7 +6,6 @@ import:
   version: v1.3.0
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
-- package: github.com/streadway/amqp
 - package: golang.org/x/net
   subpackages:
   - http2

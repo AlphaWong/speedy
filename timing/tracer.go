@@ -161,6 +161,7 @@ func detectRedirect(req *http.Request) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	// the final request that was made will be given in the response
 	return resp.Request, nil
