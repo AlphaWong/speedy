@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	stackimpact "github.com/stackimpact/stackimpact-go"
 
 	"github.com/netlify/netlify-commons/messaging"
 	"github.com/netlify/netlify-commons/metrics"
@@ -60,6 +61,12 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 }
 
 func run(cmd *cobra.Command, _ []string) {
+	_ = stackimpact.Start(stackimpact.Options{
+		AgentKey:   "3899d01ce61098c555c69b8a730dba9e3be8143b",
+		AppName:    "speedy",
+		AppVersion: Version,
+	})
+
 	config, log := start(cmd)
 	work := make(chan []byte)
 	shutdown := make(chan struct{})
