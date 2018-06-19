@@ -5,13 +5,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/DataDog/datadog-go/statsd"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/netlify/netlify-commons/messaging"
-	"github.com/netlify/netlify-commons/metrics"
 	"github.com/netlify/netlify-commons/nconf"
 
 	"github.com/netlify/speedy/conf"
@@ -34,7 +35,7 @@ func RootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
+func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry, *statsd.Client) {
 	config := new(conf.Config)
 	if err := nconf.LoadConfig(cmd, "speedy", config); err != nil {
 		logrus.WithError(err).Fatalf("Failed to load configuation: %v", err)
@@ -53,21 +54,27 @@ func start(cmd *cobra.Command) (*conf.Config, *logrus.Entry) {
 		"version":     Version,
 	})
 
-	if err := nconf.ConfigureMetrics(config.MetricsConf, log); err != nil {
-		log.WithError(err).Fatal("Failed to configure metrics")
+	sc, err := statsd.New("127.0.0.1:8125")
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to configure metrics")
 	}
-	metrics.SetErrorHandler(logError(log))
+	if config.MetricsConf != nil {
+		sc.Namespace = config.MetricsConf.Namespace
+		for k, v := range config.MetricsConf.Dimensions {
+			sc.Tags = append(sc.Tags, k+":"+v)
+		}
+	}
 
-	return config, log
+	return config, log, sc
 }
 
 func run(cmd *cobra.Command, _ []string) {
-	config, log := start(cmd)
+	config, log, sc := start(cmd)
 	work := make(chan []byte)
 	shutdown := make(chan struct{})
 
 	for i := 1; i <= config.NumWorkers; i++ {
-		go doTimings(work, config.DataCenter, log.WithField("worker", i))
+		go doTimings(work, config.DataCenter, log.WithField("worker", i), sc)
 	}
 
 	if config.NatsConf != nil {
@@ -130,23 +137,17 @@ func consumeFromNats(conn stan.Conn, conf *conf.NatsConfig, work chan<- []byte, 
 	log.Info("Shutdown consumer")
 }
 
-func doTimings(work <-chan []byte, dc string, log *logrus.Entry) {
+func doTimings(work <-chan []byte, dc string, log *logrus.Entry, sc *statsd.Client) {
 	for d := range work {
 		message := new(messages.Message)
 		if err := json.Unmarshal(d, &message); err != nil {
 			log.WithError(err).Warnf("Failed to unmarshal: %s", d)
-			metrics.NewCounter("failed_parse", nil).Count(nil)
+			sc.Incr("failed_parse", nil, 1)
 			continue
 		}
 
-		metrics.TimeBlock("request_duration", nil, func() {
-			timing.ProcessRequest(message, dc, log)
-		})
-	}
-}
-
-func logError(log *logrus.Entry) func(*metrics.RawMetric, error) {
-	return func(raw *metrics.RawMetric, err error) {
-		log.WithError(err).WithField("component", "metric_errors").Errorf("Error while processing metric: %+v", *raw)
+		start := time.Now()
+		timing.ProcessRequest(message, dc, log)
+		sc.Timing("request_duration", time.Since(start), nil, 1)
 	}
 }

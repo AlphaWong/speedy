@@ -16,15 +16,6 @@
   "metrics_conf": {
     "namespace": "speedy.",
     "default_dims": {},
-    "report_sec": 10,
-    "nats": {
-      "tls_conf": {
-        "cert_file": "/usr/local/etc/certs/speedy.pem",
-        "key_file": "/usr/local/etc/certs/speedy-key.pem",
-        "ca_files": ["/usr/local/etc/certs/ca.pem"]
-      },
-      "servers": ["nats://nats.lo:4222"],
-      "subject": "metrics.test.speedy"
-    }
+    "report_sec": 10
   }
 }
