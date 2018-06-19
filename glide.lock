@@ -1,5 +1,5 @@
-hash: cfe15c0e1bf5c95bc16098ec2817172bfe36d6cf6fd653cf0aba89c24811856a
-updated: 2018-04-23T17:30:36.503138-04:00
+hash: c83ed3db37cea72fbda49aa5744fd7af5bc2013c91301b4062fe344dc9d68168
+updated: 2018-06-19T14:15:14.040692-07:00
 imports:
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
@@ -7,6 +7,8 @@ imports:
   - errors
 - name: github.com/bugsnag/panicwrap
   version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
+- name: github.com/DataDog/datadog-go
+  version: e67964b4021ad3a334e748e8811eb3cd6becbc6e
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/gogo/protobuf
