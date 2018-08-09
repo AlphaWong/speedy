@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
+	nats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -82,6 +83,16 @@ func run(cmd *cobra.Command, _ []string) {
 		if err != nil {
 			log.WithError(err).Fatal("Failed to connect to nats")
 		}
+		rc := nc.NatsConn()
+		rc.SetClosedHandler(func(c *nats.Conn) {
+			log.Warn("NATS connection closed")
+		})
+		rc.SetDisconnectHandler(func(c *nats.Conn) {
+			log.Warn("NATS connection disconnected")
+		})
+		rc.SetReconnectHandler(func(c *nats.Conn) {
+			log.Warn("NATS reconnecting")
+		})
 		go consumeFromNats(nc, config.NatsConf, work, shutdown, log.WithField("consumer", "nats"))
 	}
 

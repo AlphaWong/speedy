@@ -1,5 +1,5 @@
-hash: c83ed3db37cea72fbda49aa5744fd7af5bc2013c91301b4062fe344dc9d68168
-updated: 2018-06-19T14:15:14.040692-07:00
+hash: 1c1e8c4c7128441d9ea9ddfa3d04c7ee850ff03761eca13a4c10032b62a0de4e
+updated: 2018-08-09T15:46:44.997112-04:00
 imports:
 - name: github.com/bugsnag/bugsnag-go
   version: 036f1af2a63f8133e596d1c127c86100b4642ba1
@@ -9,6 +9,8 @@ imports:
   version: dd8df9a3778aaebc569794383e5c4ce87d6fd89e
 - name: github.com/DataDog/datadog-go
   version: e67964b4021ad3a334e748e8811eb3cd6becbc6e
+  subpackages:
+  - statsd
 - name: github.com/fsnotify/fsnotify
   version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/gogo/protobuf
@@ -63,7 +65,7 @@ imports:
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 - name: github.com/netlify/netlify-commons
-  version: 7b0803d976c09743e8e1eeb3cd11bd5fc527a7d1
+  version: 2c62a0c5fab53e8a4bd3a3543efcd092ab115c27
   subpackages:
   - discovery
   - messaging
@@ -110,8 +112,6 @@ imports:
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/spf13/viper
   version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
-- name: github.com/streadway/amqp
-  version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: golang.org/x/crypto
   version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
