@@ -1,6 +1,11 @@
 # speedy
 A simple tool for testing the load times of a site.
 
+# Install
+```sh
+go get -u github.com/netlify/speedy
+```
+
 ## Usage
 You can either provide a config file like
 ``` json
